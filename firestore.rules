@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // Guilds can be read by anyone, but only created by authenticated users.
+    match /guilds/{guildId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      
+      // Only a user who is a member with the role 'Guild Master' can update the guild's main details.
+      // Note: This rule is complex. For the API-based approach, you'd typically handle this in backend logic.
+      // This rule provides an extra layer of direct-to-DB security.
+      allow update: if request.auth != null && 
+                     (get(/databases/$(database)/documents/guilds/$(guildId)).data.members.exists(member => member.id == request.auth.uid && member.role == 'Guild Master')
+                     || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['quests', 'members', 'proposals', 'teams', 'marketplace', 'chatMessages', 'treasury']));
+      
+      // Prevent guilds from being deleted for now.
+      allow delete: if false;
+
+    }
+    
+    // User profile data (if you create a 'users' collection)
+    match /users/{userId} {
+      // Users can only read and write to their own document.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

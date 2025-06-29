@@ -2,9 +2,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { doc, updateDoc, getDoc, arrayRemove } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import type { Member } from "@/lib/data";
 import { getRoleIcon } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,48 +34,19 @@ interface MembersTabProps {
 export function MembersTab({ guildId, members, currentUser }: MembersTabProps) {
   const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
   
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
   const handleAction = async (action: 'Promote' | 'Demote' | 'Kick', member: Member) => {
     setLoadingMemberId(member.id);
-    const guildDocRef = doc(db, 'guilds', guildId);
-
-    try {
-        const docSnap = await getDoc(guildDocRef);
-        if (!docSnap.exists()) throw new Error("Guild not found");
-        
-        const currentMembers = docSnap.data().members as Member[];
-        let updatedMembers: Member[];
-
-        if (action === 'Kick') {
-            updatedMembers = currentMembers.filter(m => m.id !== member.id);
-        } else {
-            updatedMembers = currentMembers.map(m => {
-              if (m.id === member.id) {
-                return { ...m, role: action === 'Promote' ? 'Officer' : 'Member' };
-              }
-              return m;
-            });
-        }
-        await updateDoc(guildDocRef, { members: updatedMembers });
-
-      toast({
-        title: `${action} Successful`,
-        description: `${member.name} has been ${action.toLowerCase()}ed.`,
-      });
-      router.refresh();
-    } catch (error) {
-      console.error(`Error performing action ${action}:`, error);
-      toast({
-        title: "Error",
-        description: `Failed to ${action.toLowerCase()} member. Please try again.`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingMemberId(null);
-    }
+    toast({
+        title: "Feature Not Implemented",
+        description: `The '${action}' action is not connected to the backend API yet.`,
+        variant: "destructive"
+    });
+    // In a real implementation, you would make an API call here.
+    // e.g., PATCH /api/guilds/{guildId}/members/{memberId}
+    setLoadingMemberId(null);
   };
 
   const sortedMembers = [...members].sort((a, b) => b.guildScore - a.guildScore);
@@ -121,7 +89,7 @@ export function MembersTab({ guildId, members, currentUser }: MembersTabProps) {
                   </TableCell>
                   <TableCell className="text-right font-mono">{member.guildScore}</TableCell>
                   <TableCell className="text-right">
-                    {isManager && currentUser && member.id !== currentUser.id ? (
+                    {isManager && currentUser && member.id !== currentUser.id && member.role !== 'Guild Master' ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" disabled={isLoading}>

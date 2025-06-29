@@ -3,8 +3,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import type { Guild } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,8 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 
 interface GuildSettingsDialogProps {
   guild: Guild;
-  // TODO: A real app would check user permissions before rendering this component
-  // isManager: boolean;
 }
 
 export function GuildSettingsDialog({ guild }: GuildSettingsDialogProps) {
@@ -37,34 +33,14 @@ export function GuildSettingsDialog({ guild }: GuildSettingsDialogProps) {
     e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const updatedData = {
-      name: formData.get('name') as string,
-      description: formData.get('description') as string,
-      // File uploads would be handled here in a real implementation
-    };
-
-    try {
-      const guildDocRef = doc(db, 'guilds', guild.id);
-      await updateDoc(guildDocRef, updatedData);
-
-      toast({
-        title: "Settings Saved",
-        description: "Your guild's details have been updated.",
-      });
-
-      setOpen(false);
-      router.refresh(); // Re-fetches data on the current page
-    } catch (error) {
-      console.error("Error updating document: ", error);
-      toast({
-        title: "Error",
-        description: "Failed to save settings. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    toast({
+        title: "Feature Not Implemented",
+        description: "Updating guild settings via the API is not yet implemented.",
+        variant: "destructive"
+    });
+    // In a real implementation, you would make a PATCH request to /api/guilds/{guild.id}
+    
+    setLoading(false);
   };
 
   return (

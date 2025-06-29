@@ -3,9 +3,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { Quest, Member } from "@/lib/data";
+import { createQuest } from '@/lib/data';
+import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, PlusCircle, Star } from "lucide-react";
@@ -35,70 +35,45 @@ export function QuestsTab({ guildId, quests, currentUser }: QuestsTabProps) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
+    const { user: authUser } = useAuth();
 
     const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
     const handleClaim = async (questId: string) => {
         if (!currentUser) return;
         
-        const quest = quests.find(q => q.id === questId);
-        if (quest?.claimedBy?.includes(currentUser.id)) {
-            toast({ title: "Already Claimed", description: "You have already claimed this quest.", variant: "destructive" });
-            return;
-        }
-
-        setLoading(true);
-        const guildDocRef = doc(db, 'guilds', guildId);
-        try {
-            const docSnap = await getDoc(guildDocRef);
-            if (!docSnap.exists()) throw new Error("Guild not found");
-
-            const currentQuests = docSnap.data().quests as Quest[];
-            const updatedQuests = currentQuests.map(q => {
-                if (q.id === questId) {
-                    const claimants = new Set(q.claimedBy || []);
-                    claimants.add(currentUser.id);
-                    return { ...q, claimedBy: Array.from(claimants) };
-                }
-                return q;
-            });
-            
-            await updateDoc(guildDocRef, { quests: updatedQuests });
-
-            toast({ title: "Quest Claimed!", description: "Your reward has been noted." });
-            router.refresh();
-        } catch (error) {
-            console.error("Error claiming quest:", error);
-            toast({ title: "Error", description: "Failed to claim quest.", variant: "destructive" });
-        } finally {
-            setLoading(false);
-        }
+        toast({
+            title: "Feature Not Implemented",
+            description: "Quest claiming is not yet connected to the backend.",
+            variant: "destructive"
+        });
     };
 
     const handleCreateQuest = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (!authUser) {
+            toast({ title: "Not Authenticated", description: "You must be logged in.", variant: "destructive" });
+            return;
+        }
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         
-        const newQuest: Quest = {
-            id: `quest-${Date.now()}`,
+        const questData = {
             title: formData.get('title') as string,
             description: formData.get('description') as string,
-            reward: Number(formData.get('reward')),
-            claimedBy: []
+            reward: formData.get('reward') as string,
         };
 
         try {
-            const guildDocRef = doc(db, 'guilds', guildId);
-            await updateDoc(guildDocRef, {
-                quests: arrayUnion(newQuest)
-            });
+            const token = await authUser.getIdToken();
+            await createQuest(guildId, questData, token);
+
             toast({ title: "Quest Created", description: "The new quest is now on the board." });
             setOpen(false);
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error creating quest:", error);
-            toast({ title: "Error", description: "Failed to create quest.", variant: "destructive" });
+            toast({ title: "Error", description: error.message || "Failed to create quest.", variant: "destructive" });
         } finally {
             setLoading(false);
         }

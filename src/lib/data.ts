@@ -6,12 +6,11 @@ import {
   getDocs,
   query,
 } from 'firebase/firestore';
-import { db } from './firebase'; // Import the initialized Firestore instance
+import { db } from './firebase'; // This is still needed for any direct reads/writes remaining (like Chat)
 import { CircleUser, Crown, Shield, Banknote } from "lucide-react";
 
 // --- INTERFACES ---
 // These define the shape of the data used throughout the application.
-// These match the expected structure in your Firestore documents.
 
 export interface Member {
   id: string;
@@ -114,26 +113,38 @@ export interface Guild {
   chatMessages: ChatMessage[];
 }
 
+// --- API HELPER ---
+// A simple fetch wrapper to communicate with our Firebase Functions API.
+// In a larger app, this would be in its own file and might use a library like Axios.
+// Note: For this to work in development, you'll need to run the Firebase emulator
+// and might need to configure proxying or use the full emulator URL.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api'; // Using relative path, assuming App Hosting rewrites to the function.
+
+const apiFetch = async (path: string, options: RequestInit = {}) => {
+    const response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Request failed with status ' + response.status }));
+        throw new Error(errorData.error || 'An unknown API error occurred');
+    }
+    
+    return response.json();
+}
+
+
 // --- API FUNCTIONS ---
-// These functions fetch data from your Firestore database.
+// These functions now call our backend API instead of Firestore directly.
 
 export const getGuilds = async (): Promise<Guild[]> => {
   try {
-    const guildsCollection = collection(db, 'guilds');
-    const q = query(guildsCollection);
-    const querySnapshot = await getDocs(q);
-
-    if (querySnapshot.empty) {
-      console.log('No guilds found in Firestore.');
-      return [];
-    }
-
-    const guilds = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Guild[];
-    
-    return guilds;
+    const guilds = await apiFetch('/guilds');
+    return guilds as Guild[];
   } catch (error) {
     console.error("Error fetching guilds:", error);
     return [];
@@ -143,19 +154,36 @@ export const getGuilds = async (): Promise<Guild[]> => {
 
 export const getGuildById = async (id: string): Promise<Guild | undefined> => {
   try {
-    const guildDocRef = doc(db, 'guilds', id);
-    const docSnap = await getDoc(guildDocRef);
-
-    if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as Guild;
-    } else {
-      console.log(`No guild found with id: ${id}`);
-      return undefined;
-    }
+    const guild = await apiFetch(`/guilds/${id}`);
+    return guild as Guild;
   } catch (error) {
-    console.error("Error fetching guild by ID:", error);
+    console.error(`Error fetching guild by ID ${id}:`, error);
     return undefined;
   }
+};
+
+export const createGuild = async (
+    name: string, 
+    description: string, 
+    token: string
+): Promise<Guild> => {
+    return apiFetch('/guilds', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ name, description }),
+    });
+};
+
+export const createQuest = async (
+    guildId: string,
+    questData: { title: string, description: string, reward: string },
+    token: string
+): Promise<Quest> => {
+    return apiFetch(`/guilds/${guildId}/quests`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(questData),
+    });
 };
 
 

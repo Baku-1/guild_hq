@@ -3,8 +3,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Guild, Member } from "@/lib/data";
+import { createGuild } from "@/lib/data";
 import { useAuth } from "@/contexts/auth-context";
 
 export function CreateGuildDialog() {
@@ -40,38 +38,10 @@ export function CreateGuildDialog() {
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const guildName = formData.get('name') as string;
     const guildDescription = formData.get('description') as string;
-
-    const guildCreator: Member = {
-      id: user.uid,
-      name: user.displayName || 'Guild Master',
-      role: 'Guild Master',
-      guildScore: 1000,
-      avatarUrl: user.photoURL || 'https://placehold.co/100x100.png',
-      walletAddress: '0x0000000000000000000000000000000000000001' // Placeholder address
-    }
-
-    const newGuildData: Omit<Guild, 'id'> = {
-      name: guildName,
-      description: guildDescription,
-      iconUrl: 'https://placehold.co/128x128.png',
-      bannerUrl: 'https://placehold.co/600x240.png',
-      tags: ['New', 'PvE'],
-      summary: `Welcome to ${guildName}! This is a brand new guild. Start by recruiting members and creating quests.`,
-      members: [guildCreator], 
-      quests: [],
-      teams: [],
-      proposals: [],
-      marketplace: [],
-      chatMessages: [],
-      treasury: {
-        tokens: [],
-        nfts: [],
-      },
-    };
-
+    
     try {
-      const docRef = await addDoc(collection(db, "guilds"), newGuildData);
-      console.log("Document written with ID: ", docRef.id);
+      const token = await user.getIdToken();
+      const newGuild = await createGuild(guildName, guildDescription, token);
       
       toast({
         title: "Guild Created!",
@@ -80,12 +50,12 @@ export function CreateGuildDialog() {
       
       setOpen(false);
       router.refresh(); 
-      router.push(`/guilds/${docRef.id}`);
-    } catch (error) {
-      console.error("Error adding document: ", error);
+      router.push(`/guilds/${newGuild.id}`);
+    } catch (error: any) {
+      console.error("Error creating guild: ", error);
       toast({
         title: "Error",
-        description: "Failed to create the guild. Please try again.",
+        description: error.message || "Failed to create the guild. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -121,18 +91,6 @@ export function CreateGuildDialog() {
                 Description
               </Label>
               <Input id="description" name="description" placeholder="A guild for elite adventurers." className="col-span-3" required />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="icon" className="text-right">
-                Guild Icon
-              </Label>
-              <Input id="icon" name="icon" type="file" className="col-span-3" disabled />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="banner" className="text-right">
-                Banner
-              </Label>
-              <Input id="banner" name="banner" type="file" className="col-span-3" disabled />
             </div>
           </div>
           <DialogFooter>
