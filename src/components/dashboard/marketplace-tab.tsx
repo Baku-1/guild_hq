@@ -33,7 +33,7 @@ export function MarketplaceTab({ items }: MarketplaceTabProps) {
             <CardFooter className="flex justify-between items-center p-4 pt-0">
               <div className="flex items-center gap-2 text-yellow-400 font-bold">
                 <Coins className="h-4 w-4" />
-                <span>{item.price}</span>
+                <span>{item.price.amount} {item.price.symbol}</span>
               </div>
               <Button size="sm">
                 <ShoppingCart className="mr-2 h-4 w-4" />

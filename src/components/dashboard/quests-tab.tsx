@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Quest } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, PlusCircle, Coins } from "lucide-react";
+import { CheckCircle, PlusCircle, Star } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -60,7 +60,7 @@ export function QuestsTab({ quests: initialQuests }: QuestsTabProps) {
                         <Textarea id="description" placeholder="Describe the quest in detail..." className="col-span-3" />
                     </div>
                      <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="reward" className="text-right">Reward</Label>
+                        <Label htmlFor="reward" className="text-right">Reward (GS)</Label>
                         <Input id="reward" type="number" placeholder="e.g. 500" className="col-span-3" />
                     </div>
                 </div>
@@ -76,7 +76,7 @@ export function QuestsTab({ quests: initialQuests }: QuestsTabProps) {
             <CardHeader>
               <CardTitle className="font-headline">{quest.title}</CardTitle>
               <CardDescription className="flex items-center gap-2 text-yellow-400">
-                <Coins className="h-4 w-4" /> {quest.reward} Gold
+                <Star className="h-4 w-4" /> {quest.reward} GS
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">

@@ -17,7 +17,7 @@ export interface Quest {
 }
 
 export interface Axie {
-  id: string;
+  id:string;
   name: string;
   imageUrl: string;
 }
@@ -42,7 +42,10 @@ export interface MarketplaceItem {
     id: string;
     name: string;
     description: string;
-    price: number;
+    price: {
+        amount: number;
+        symbol: string;
+    };
     imageUrl: string;
 }
 
@@ -63,8 +66,10 @@ export interface Guild {
   tags: string[];
   summary: string;
   treasury: {
-    gold: number;
-    gems: number;
+    tokens: {
+        symbol: string;
+        balance: number;
+    }[];
   };
   members: Member[];
   quests: Quest[];
@@ -106,9 +111,9 @@ const mockProposals: Proposal[] = [
 ];
 
 const mockMarketplace: MarketplaceItem[] = [
-    { id: 'm1', name: 'Dragonscale Shield', description: 'A shield of immense durability, resistant to fire.', price: 1200, imageUrl: 'https://placehold.co/200x200.png' },
-    { id: 'm2', name: 'Elixir of Vigor', description: 'A potion that restores all health and stamina.', price: 150, imageUrl: 'https://placehold.co/200x200.png' },
-    { id: 'm3', name: 'Scroll of Teleportation', description: 'A rare scroll that allows instant travel to the guild hall.', price: 500, imageUrl: 'https://placehold.co/200x200.png' },
+    { id: 'm1', name: 'Dragonscale Shield', description: 'A shield of immense durability, resistant to fire.', price: { amount: 5.5, symbol: 'AXS' }, imageUrl: 'https://placehold.co/200x200.png' },
+    { id: 'm2', name: 'Elixir of Vigor', description: 'A potion that restores all health and stamina.', price: { amount: 1500, symbol: 'SLP' }, imageUrl: 'https://placehold.co/200x200.png' },
+    { id: 'm3', name: 'Scroll of Teleportation', description: 'A rare scroll that allows instant travel to the guild hall.', price: { amount: 2.1, symbol: 'AXS' }, imageUrl: 'https://placehold.co/200x200.png' },
 ];
 
 const mockChat: ChatMessage[] = [
@@ -126,7 +131,7 @@ const guilds: Guild[] = [
     bannerUrl: 'https://placehold.co/600x240.png',
     tags: ['PvE', 'Hardcore'],
     summary: 'The Aegis Vanguard has seen a productive week, with Kael completing a critical resource-gathering quest. A new proposal by Officer Brynn to increase guild taxes is currently under review, sparking healthy debate among members. The guild master, Aelar, welcomed Lyra, a new recruit, strengthening our ranks.',
-    treasury: { gold: 15030, gems: 250 },
+    treasury: { tokens: [{ symbol: 'AXS', balance: 125.5 }, { symbol: 'SLP', balance: 150320 }] },
     members: mockMembers,
     quests: mockQuests,
     teams: mockTeams,
@@ -142,7 +147,7 @@ const guilds: Guild[] = [
     bannerUrl: 'https://placehold.co/600x240.png',
     tags: ['PvP', 'Competitive'],
     summary: 'The Shadow Syndicate has been active in the arena, with multiple victories reported. A proposal for a new team composition strategy has been passed unanimously. The marketplace is currently stocked with rare poisons and infiltration tools.',
-    treasury: { gold: 28000, gems: 800 },
+    treasury: { tokens: [{ symbol: 'AXS', balance: 210.2 }, { symbol: 'SLP', balance: 340500 }] },
     members: mockMembers.slice(0, 2),
     quests: mockQuests.slice(0, 1),
     teams: mockTeams.slice(0, 1),
@@ -158,7 +163,7 @@ const guilds: Guild[] = [
     bannerUrl: 'https://placehold.co/600x240.png',
     tags: ['RP', 'Exploration'],
     summary: 'The Lore Weavers have uncovered a new ancient ruin, and an expedition is being planned. The guild treasury has been boosted by the sale of several rare artifacts found during recent explorations. A new quest to decipher ancient texts is now available.',
-    treasury: { gold: 8500, gems: 120 },
+    treasury: { tokens: [{ symbol: 'AXS', balance: 50.8 }, { symbol: 'SLP', balance: 80200 }] },
     members: mockMembers.slice(2, 4),
     quests: mockQuests.slice(1, 3),
     teams: [],
