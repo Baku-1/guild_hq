@@ -26,7 +26,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
   }
 
   // Mock the current user. In a real app, this would come from an auth context.
-  // User IDs from the database are 'user-1' (Aelar, Guild Master), 'user-2' (Brynn, Officer), etc.
+  // User IDs from the database are 'user-1' (Aelar, Guild Master), 'user-2' (Brynn, Treasury Manager), etc.
   const currentUserId = 'user-1';
 
   const TABS = [
@@ -72,7 +72,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
       
       <main className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-            <Tabs defaultValue="members" className="w-full">
+            <Tabs defaultValue="treasury" className="w-full">
             <TabsList className="grid w-full grid-cols-5 md:grid-cols-9">
                 {TABS.map(tab => (
                      <TabsTrigger key={tab.value} value={tab.value}>
@@ -102,7 +102,11 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
                 />
             </TabsContent>
             <TabsContent value="treasury" className="mt-6">
-                <TreasuryTab treasury={guild.treasury} />
+                <TreasuryTab 
+                    treasury={guild.treasury}
+                    members={guild.members}
+                    currentUserId={currentUserId}
+                />
             </TabsContent>
             <TabsContent value="marketplace" className="mt-6">
                 <MarketplaceTab items={guild.marketplace} />

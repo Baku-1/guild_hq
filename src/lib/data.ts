@@ -1,4 +1,4 @@
-import { CircleUser, Crown, Shield } from "lucide-react";
+import { CircleUser, Crown, Shield, Banknote } from "lucide-react";
 
 // --- INTERFACES ---
 // These define the shape of the data used throughout the application.
@@ -6,7 +6,7 @@ import { CircleUser, Crown, Shield } from "lucide-react";
 export interface Member {
   id: string;
   name: string;
-  role: 'Guild Master' | 'Officer' | 'Member';
+  role: 'Guild Master' | 'Officer' | 'Member' | 'Treasury Manager';
   avatarUrl: string;
   guildScore: number;
 }
@@ -147,7 +147,7 @@ const db = {
         },
         members: [
             { userId: 'user-1', role: 'Guild Master', guildScore: 1250 },
-            { userId: 'user-2', role: 'Officer', guildScore: 980 },
+            { userId: 'user-2', role: 'Treasury Manager', guildScore: 980 },
             { userId: 'user-3', role: 'Member', guildScore: 450 },
             { userId: 'user-4', role: 'Member', guildScore: 620 },
         ],
@@ -271,6 +271,8 @@ export const getRoleIcon = (role: Member['role']) => {
             return Crown;
         case 'Officer':
             return Shield;
+        case 'Treasury Manager':
+            return Banknote;
         case 'Member':
             return CircleUser;
     }
