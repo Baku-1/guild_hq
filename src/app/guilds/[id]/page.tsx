@@ -29,7 +29,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
   // 'user-1' is a Guild Master (manager view).
   // 'user-2' is a Treasury Manager (manager view for treasury).
   // 'user-3' is a Member (non-manager view).
-  const currentUserId = 'user-3';
+  const currentUserId = 'user-1';
 
   const TABS = [
     { value: "summary", label: "Summary", icon: Newspaper },
