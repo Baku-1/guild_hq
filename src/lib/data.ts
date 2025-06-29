@@ -52,10 +52,12 @@ export interface Proposal {
   title: string;
   description: string;
   proposer: string;
-  votesFor: number;
-  votesAgainst: number;
-  status: 'active' | 'passed' | 'failed';
+  status: 'active' | 'passed' | 'failed' | 'expired';
+  createdAt: string;
+  expiresAt: string;
+  votes: Record<string, 'for' | 'against'>; // Maps userId to their vote
 }
+
 
 export interface MarketplaceItem {
     id: string;

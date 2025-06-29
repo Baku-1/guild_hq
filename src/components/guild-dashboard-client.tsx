@@ -101,7 +101,7 @@ export function GuildDashboardClient({ guild }: GuildDashboardClientProps) {
                 <MembersTab guildId={guild.id} members={guild.members} currentUser={currentUser} />
             </TabsContent>
             <TabsContent value="proposals" className="mt-6">
-                <ProposalsTab guildId={guild.id} proposals={guild.proposals} currentUser={currentUser} />
+                <ProposalsTab guildId={guild.id} proposals={guild.proposals} currentUser={currentUser} memberCount={guild.members.length} />
             </TabsContent>
             <TabsContent value="teams" className="mt-6">
                 <TeamsTab 

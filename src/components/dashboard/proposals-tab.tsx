@@ -3,13 +3,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Proposal, Member } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ThumbsUp, ThumbsDown, PlusCircle } from "lucide-react";
+import { ThumbsUp, ThumbsDown, PlusCircle, Clock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,42 +23,52 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 interface ProposalsTabProps {
   guildId: string;
   proposals: Proposal[];
   currentUser?: Member;
+  memberCount: number;
 }
 
-export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabProps) {
-  const [voted, setVoted] = useState<Record<string, 'for' | 'against' | null>>({});
+export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: ProposalsTabProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
   const handleVote = async (proposalId: string, vote: 'for' | 'against') => {
-    if (voted[proposalId] || !currentUser) return;
+    if (!currentUser) return;
 
-    setVoted({ ...voted, [proposalId]: vote });
-
+    setLoading(true);
     const guildDocRef = doc(db, 'guilds', guildId);
     try {
         const docSnap = await getDoc(guildDocRef);
         if (!docSnap.exists()) throw new Error("Guild not found");
         
         const currentProposals = docSnap.data().proposals as Proposal[];
-        const updatedProposals = currentProposals.map(p => {
-            if (p.id === proposalId) {
-                return {
-                    ...p,
-                    votesFor: vote === 'for' ? p.votesFor + 1 : p.votesFor,
-                    votesAgainst: vote === 'against' ? p.votesAgainst + 1 : p.votesAgainst,
-                };
-            }
-            return p;
-        });
+        
+        const proposalIndex = currentProposals.findIndex(p => p.id === proposalId);
+        if (proposalIndex === -1) throw new Error("Proposal not found");
 
+        const proposal = currentProposals[proposalIndex];
+        
+        // Server-side checks
+        if (proposal.votes[currentUser.id]) {
+            toast({ title: "Already Voted", description: "You have already cast your vote on this proposal.", variant: "destructive" });
+            setLoading(false);
+            return;
+        }
+        if (new Date() > new Date(proposal.expiresAt)) {
+             toast({ title: "Voting Closed", description: "This proposal has already expired.", variant: "destructive" });
+            setLoading(false);
+            return;
+        }
+
+        const updatedProposals = [...currentProposals];
+        updatedProposals[proposalIndex].votes[currentUser.id] = vote;
+        
         await updateDoc(guildDocRef, { proposals: updatedProposals });
 
         toast({
@@ -67,14 +77,15 @@ export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabPr
         });
         router.refresh();
 
-    } catch(error) {
+    } catch(error: any) {
         console.error("Error casting vote:", error);
         toast({
             title: "Error",
-            description: "Failed to cast vote. Please try again.",
+            description: error.message || "Failed to cast vote. Please try again.",
             variant: "destructive"
         });
-        setVoted({ ...voted, [proposalId]: null });
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -86,15 +97,18 @@ export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabPr
     const formData = new FormData(e.currentTarget);
     const title = formData.get('title') as string;
     const description = formData.get('description') as string;
+    const now = new Date();
+    const expires = new Date(now.setDate(now.getDate() + 3)); // 3-day voting period
 
     const newProposal: Proposal = {
         id: `prop-${Date.now()}`,
         title,
         description,
         proposer: currentUser.name,
-        votesFor: 0,
-        votesAgainst: 0,
-        status: 'active'
+        votes: {},
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        expiresAt: expires.toISOString(),
     };
     
     try {
@@ -136,7 +150,7 @@ export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabPr
                     <DialogHeader>
                         <DialogTitle className="font-headline">Create a new Proposal</DialogTitle>
                         <DialogDescription>
-                            Propose a change for the guild to vote on.
+                            Propose a change for the guild to vote on. It will be active for 3 days.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
@@ -158,8 +172,14 @@ export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabPr
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {proposals.map((p) => {
-          const totalVotes = p.votesFor + p.votesAgainst;
-          const forPercentage = totalVotes > 0 ? (p.votesFor / totalVotes) * 100 : 0;
+          const votesFor = Object.values(p.votes).filter(v => v === 'for').length;
+          const votesAgainst = Object.values(p.votes).filter(v => v === 'against').length;
+          const totalVotes = votesFor + votesAgainst;
+          const forPercentage = totalVotes > 0 ? (votesFor / totalVotes) * 100 : 0;
+          
+          const userVote = currentUser ? p.votes[currentUser.id] : null;
+          const isExpired = new Date() > new Date(p.expiresAt);
+
           return (
             <Card key={p.id}>
               <CardHeader>
@@ -170,31 +190,37 @@ export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabPr
                 <p className="text-sm text-muted-foreground mb-4">{p.description}</p>
                 <div className="space-y-2">
                     <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>For: {p.votesFor}</span>
-                        <span>Against: {p.votesAgainst}</span>
+                        <span>For: {votesFor}</span>
+                        <span>Against: {votesAgainst}</span>
                     </div>
                   <Progress value={forPercentage} className="h-2" />
                 </div>
               </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button 
-                    size="sm" 
-                    onClick={() => handleVote(p.id, 'for')} 
-                    disabled={p.status !== 'active' || !!voted[p.id] || !currentUser}
-                    variant={voted[p.id] === 'for' ? 'default' : 'outline'}
-                    className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30 hover:text-green-300 disabled:opacity-50"
-                >
-                  <ThumbsUp className="mr-2 h-4 w-4" /> For
-                </Button>
-                <Button 
-                    size="sm" 
-                    onClick={() => handleVote(p.id, 'against')} 
-                    disabled={p.status !== 'active' || !!voted[p.id] || !currentUser}
-                    variant={voted[p.id] === 'against' ? 'default' : 'outline'}
-                    className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30 hover:text-red-300 disabled:opacity-50"
-                >
-                  <ThumbsDown className="mr-2 h-4 w-4" /> Against
-                </Button>
+              <CardFooter className="flex justify-between items-center">
+                <div className="flex gap-2">
+                    <Button 
+                        size="sm" 
+                        onClick={() => handleVote(p.id, 'for')} 
+                        disabled={isExpired || !!userVote || !currentUser || loading}
+                        variant={userVote === 'for' ? 'default' : 'outline'}
+                        className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30 hover:text-green-300 disabled:opacity-50"
+                    >
+                    <ThumbsUp className="mr-2 h-4 w-4" /> For
+                    </Button>
+                    <Button 
+                        size="sm" 
+                        onClick={() => handleVote(p.id, 'against')} 
+                        disabled={isExpired || !!userVote || !currentUser || loading}
+                        variant={userVote === 'against' ? 'default' : 'outline'}
+                        className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30 hover:text-red-300 disabled:opacity-50"
+                    >
+                    <ThumbsDown className="mr-2 h-4 w-4" /> Against
+                    </Button>
+                </div>
+                <div className={`text-sm flex items-center gap-2 ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    <Clock className="h-4 w-4" />
+                    {isExpired ? 'Expired' : `${formatDistanceToNowStrict(new Date(p.expiresAt))} left`}
+                </div>
               </CardFooter>
             </Card>
           );
