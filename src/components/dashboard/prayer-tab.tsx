@@ -7,12 +7,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkles, Check } from "lucide-react";
+import { Sparkles, Check, Users } from "lucide-react";
 
 // --- Atia's Blessing Contract Details ---
-// This information is from the script you provided.
-// In a real app, you might store this in a separate constants file.
-
 const ATIA_CONTRACT_ADDRESS = '0x9d3936dbd9a794ee31ef9f13814233d435bd806c';
 const ATIA_ABI = [
   { inputs: [{ internalType: 'address', name: 'to', type: 'address' }], name: 'activateStreak', outputs: [], stateMutability: 'nonpayable', type: 'function' },
@@ -56,16 +53,16 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // In a real application, this useEffect would use ethers.js to fetch
-  // the prayer status for each member from the Ronin blockchain.
+  const currentUser = members.find(m => m.id === currentUserId);
+  const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
+
   useEffect(() => {
     const fetchStatuses = async () => {
       setLoading(true);
       const statuses: Record<string, PrayerStatus> = {};
       
-      // Simulate fetching data for each member
       for (const member of members) {
-        // This is mock data. A real implementation would call the contract.
+        // This is mock data. A real implementation would call the contract for each member.
         statuses[member.id] = {
           streak: Math.floor(Math.random() * 100),
           hasPrayed: Math.random() > 0.5,
@@ -79,37 +76,31 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
     fetchStatuses();
   }, [members]);
 
-  const handlePray = async (memberId: string, memberName: string) => {
+  const handlePrayForAll = async () => {
     toast({
-        title: "Submitting Prayer...",
-        description: `Sending transaction to pray for ${memberName}.`,
+        title: "Preparing Batch Prayer...",
+        description: `Please review and sign the transaction in your wallet.`,
     });
 
-    // --- REAL BLOCKCHAIN INTERACTION WOULD HAPPEN HERE ---
-    // 1. Get wallet provider from the browser (e.g., Ronin Wallet).
-    //    const provider = new ethers.BrowserProvider(window.ronin);
-    // 2. Get the signer.
-    //    const signer = await provider.getSigner();
-    // 3. Create a contract instance connected to the signer.
-    //    const atiaContract = new ethers.Contract(ATIA_CONTRACT_ADDRESS, ATIA_ABI, signer);
-    // 4. Call the activateStreak function.
-    //    const tx = await atiaContract.activateStreak(memberAddress);
-    // 5. Wait for the transaction to be confirmed.
-    //    await tx.wait();
-    
-    // For now, we'll just simulate the success state.
+    // In a real app, this would construct a multicall transaction for the manager's wallet to sign.
+    // This keeps the manager's private key secure in their wallet extension.
     setTimeout(() => {
-        setPrayerStatus(prev => ({
-            ...prev,
-            [memberId]: {
-                streak: (prev[memberId]?.streak || 0) + 1,
-                hasPrayed: true
-            }
-        }));
+        setPrayerStatus(prev => {
+            const newStatus = { ...prev };
+            members.forEach(member => {
+                if (!newStatus[member.id]?.hasPrayed) {
+                    newStatus[member.id] = {
+                        streak: (newStatus[member.id]?.streak || 0) + 1,
+                        hasPrayed: true,
+                    };
+                }
+            });
+            return newStatus;
+        });
 
         toast({
-            title: "Prayer Successful!",
-            description: `Atia's blessing has been invoked for ${memberName}. Their streak continues!`,
+            title: "Batch Prayer Submitted!",
+            description: `Atia's blessing has been invoked for all eligible members.`,
         });
     }, 2000);
   };
@@ -117,8 +108,16 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-headline">Atia's Blessing</h2>
-        <p className="text-sm text-muted-foreground">Maintain your daily prayer streak.</p>
+        <div>
+            <h2 className="text-2xl font-headline">Atia's Blessing</h2>
+            <p className="text-sm text-muted-foreground">Maintain the guild's daily prayer streaks.</p>
+        </div>
+        {isManager && (
+            <Button onClick={handlePrayForAll}>
+                <Users className="mr-2 h-4 w-4" />
+                Pray for All Members
+            </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -126,7 +125,7 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
           <p>Loading prayer statuses...</p>
         ) : (
           members.map(member => (
-            <Card key={member.id}>
+            <Card key={member.id} className={prayerStatus[member.id]?.hasPrayed ? 'bg-green-500/10 border-green-500/20' : ''}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <Avatar>
@@ -142,15 +141,15 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
                 </div>
                 
                 {prayerStatus[member.id]?.hasPrayed ? (
-                  <Button variant="secondary" disabled>
-                    <Check className="mr-2 h-4 w-4" />
+                   <div className="flex items-center text-sm font-medium text-green-400 gap-2">
+                    <Check className="h-5 w-5" />
                     Prayed
-                  </Button>
+                  </div>
                 ) : (
-                  <Button onClick={() => handlePray(member.id, member.name)}>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Pray
-                  </Button>
+                   <div className="flex items-center text-sm font-medium text-yellow-400/80 gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Pending
+                  </div>
                 )}
               </CardContent>
             </Card>
