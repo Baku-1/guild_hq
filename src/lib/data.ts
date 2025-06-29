@@ -72,6 +72,7 @@ export interface MarketplaceItem {
     sellerId: string;
     sellerName: string;
     buyerId?: string;
+    status: 'available' | 'sold';
 }
 
 export interface ChatMessage {

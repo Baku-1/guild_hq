@@ -120,7 +120,7 @@ export function GuildDashboardClient({ guild }: GuildDashboardClientProps) {
                 />
             </TabsContent>
             <TabsContent value="marketplace" className="mt-6">
-                <MarketplaceTab items={guild.marketplace} />
+                <MarketplaceTab guildId={guild.id} items={guild.marketplace} currentUser={currentUser} />
             </TabsContent>
              <TabsContent value="prayers" className="mt-6">
                 <PrayerTab members={guild.members} currentUser={currentUser} />

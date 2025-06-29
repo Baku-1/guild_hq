@@ -3,12 +3,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { MarketplaceItem, Member } from "@/lib/data";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Coins, ShoppingCart, PlusCircle } from "lucide-react";
+import { Coins, ShoppingCart, PlusCircle, Loader2, Check } from "lucide-react";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,25 +32,69 @@ interface MarketplaceTabProps {
 
 export function MarketplaceTab({ guildId, items, currentUser }: MarketplaceTabProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [listingLoading, setListingLoading] = useState(false);
+  const [buyingItemId, setBuyingItemId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   
-  const handleBuy = (item: MarketplaceItem) => {
+  const handleBuy = async (itemToBuy: MarketplaceItem) => {
+    if (!currentUser) return;
+    setBuyingItemId(itemToBuy.id);
+
     toast({
         title: "Initiating Purchase...",
-        description: `Please confirm the transaction for ${item.name} in your wallet.`,
+        description: `Please confirm the transaction for ${itemToBuy.name} in your wallet.`,
     });
-    // This is a placeholder for a real blockchain transaction.
-    // In a real app, you would use ethers.js or a similar library
-    // to interact with a smart contract that handles the sale.
-    console.log(`Simulating purchase of ${item.name} for ${item.price.amount} ${item.price.symbol}`);
+    
+    try {
+        // This is a placeholder for a real blockchain transaction.
+        console.log(`Simulating purchase of ${itemToBuy.name} for ${itemToBuy.price.amount} ${itemToBuy.price.symbol}`);
+        // Simulate a network delay for the transaction
+        await new Promise(resolve => setTimeout(resolve, 1500)); 
+
+        const guildDocRef = doc(db, 'guilds', guildId);
+        const docSnap = await getDoc(guildDocRef);
+
+        if (!docSnap.exists()) {
+            throw new Error("Guild not found");
+        }
+
+        const currentItems = docSnap.data().marketplace as MarketplaceItem[];
+        const updatedItems = currentItems.map(item => {
+            if (item.id === itemToBuy.id) {
+                return {
+                    ...item,
+                    status: 'sold' as const,
+                    buyerId: currentUser.id,
+                };
+            }
+            return item;
+        });
+
+        await updateDoc(guildDocRef, { marketplace: updatedItems });
+
+        toast({
+            title: "Purchase Successful!",
+            description: `You have purchased ${itemToBuy.name}.`
+        });
+        router.refresh();
+
+    } catch (error) {
+        console.error("Error during purchase:", error);
+        toast({
+            title: "Purchase Failed",
+            description: "Could not complete the purchase. Please try again.",
+            variant: "destructive"
+        });
+    } finally {
+        setBuyingItemId(null);
+    }
   }
 
   const handleCreateListing = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!currentUser) return;
-    setLoading(true);
+    setListingLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const newItem: MarketplaceItem = {
@@ -63,7 +107,8 @@ export function MarketplaceTab({ guildId, items, currentUser }: MarketplaceTabPr
         },
         imageUrl: 'https://placehold.co/400x400.png', // Placeholder image
         sellerId: currentUser.id,
-        sellerName: currentUser.name
+        sellerName: currentUser.name,
+        status: 'available',
     };
 
     try {
@@ -81,7 +126,7 @@ export function MarketplaceTab({ guildId, items, currentUser }: MarketplaceTabPr
         console.error("Error creating listing:", error);
         toast({ title: "Error", description: "Failed to list item.", variant: "destructive" });
     } finally {
-        setLoading(false);
+        setListingLoading(false);
     }
   }
 
@@ -120,7 +165,7 @@ export function MarketplaceTab({ guildId, items, currentUser }: MarketplaceTabPr
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit" disabled={loading}>{loading ? "Listing..." : "Create Listing"}</Button>
+                        <Button type="submit" disabled={listingLoading}>{listingLoading ? "Listing..." : "Create Listing"}</Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -150,10 +195,17 @@ export function MarketplaceTab({ guildId, items, currentUser }: MarketplaceTabPr
                 <Coins className="h-4 w-4" />
                 <span>{item.price.amount} {item.price.symbol}</span>
               </div>
-              <Button size="sm" onClick={() => handleBuy(item)} disabled={!currentUser || currentUser.id === item.sellerId}>
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Buy
-              </Button>
+              {item.status === 'sold' ? (
+                <Button size="sm" variant="outline" disabled>
+                  <Check className="mr-2 h-4 w-4" />
+                  Sold
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => handleBuy(item)} disabled={!currentUser || currentUser.id === item.sellerId || !!buyingItemId}>
+                  {buyingItemId === item.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
+                  Buy
+                </Button>
+              )}
             </CardFooter>
           </Card>
         )) : <p className="text-muted-foreground col-span-full">The marketplace is empty.</p>}
