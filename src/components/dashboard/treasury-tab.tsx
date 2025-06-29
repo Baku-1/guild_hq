@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ethers } from "ethers";
 
 interface TreasuryTabProps {
   guildId: string;
@@ -60,8 +61,6 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
   const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Treasury Manager';
 
-  // This is placeholder data. In a real application, you would fetch
-  // the current user's actual NFTs from a blockchain API.
   const userNfts: TreasuryNft[] = [
     { id: 'nft-1', name: "Mystic Axie", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUserId },
     { id: 'nft-2', name: "Jade Reptile", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUserId },
@@ -74,9 +73,33 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
     const formData = new FormData(e.currentTarget);
     const tokenSymbol = formData.get('token') as string;
     const amount = parseFloat(formData.get('amount') as string);
-    const guildDocRef = doc(db, 'guilds', guildId);
+
+    toast({
+        title: "Confirm in Wallet",
+        description: "Please approve the token donation in your wallet.",
+    });
 
     try {
+        // In a real Web3 app, you would first trigger a transaction for the user
+        // to approve and send the tokens to the guild treasury contract.
+        // This is a placeholder for that logic.
+        // 1. Connect to user's wallet (e.g., using ethers)
+        // const provider = new ethers.BrowserProvider(window.ethereum);
+        // const signer = await provider.getSigner();
+        
+        // 2. Get the token contract instance (address would come from a config)
+        // const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, ERC20_ABI, signer);
+        
+        // 3. Request the user to sign and send the transaction
+        // const tx = await tokenContract.transfer(GUILD_TREASURY_ADDRESS, ethers.parseUnits(amount.toString(), TOKEN_DECIMALS));
+        // await tx.wait();
+        
+        // 4. Only after the transaction is confirmed, update the Firestore database.
+        // The following code simulates the backend update after a successful transaction.
+        console.log(`Simulating transaction for donating ${amount} ${tokenSymbol}...`);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate tx delay
+
+        const guildDocRef = doc(db, 'guilds', guildId);
         const docSnap = await getDoc(guildDocRef);
         if (!docSnap.exists()) throw new Error("Guild not found");
         
@@ -107,8 +130,21 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
 
   const handleNftDonate = async (nft: TreasuryNft) => {
      setLoading(true);
-     const guildDocRef = doc(db, 'guilds', guildId);
+     toast({
+        title: "Confirm in Wallet",
+        description: `Please approve the donation of ${nft.name} in your wallet.`,
+     });
+
      try {
+        // This would be similar to the token donation flow, but for an ERC721 token.
+        // 1. Get signer from wallet
+        // 2. Get NFT contract instance
+        // 3. Call `transferFrom(userAddress, guildTreasuryAddress, nft.id)`
+        // 4. After tx confirmation, update Firestore.
+        console.log(`Simulating transaction for donating NFT ${nft.name}...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const guildDocRef = doc(db, 'guilds', guildId);
         await updateDoc(guildDocRef, {
             'treasury.nfts': arrayUnion(nft)
         });
@@ -128,22 +164,18 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
 
   const handleDisburse = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // This is a placeholder. A real implementation would be a complex
-    // backend process involving secure transactions.
     toast({
       title: "Disbursement Not Implemented",
-      description: "This feature requires a secure backend process.",
+      description: "This feature requires a secure backend and smart contract.",
     });
     setDisburseOpen(false);
   };
 
   const handleWithdraw = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // This is a placeholder. A real implementation would require
-    // multi-sig authorization and a secure backend process.
     toast({
       title: "Withdrawal Not Implemented",
-      description: "This feature requires a secure backend process.",
+      description: "This feature requires multi-sig authorization and a secure backend.",
     });
     setWithdrawOpen(false);
   };
@@ -250,7 +282,7 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
                       </div>
                     </div>
                     <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? "Donating..." : "Confirm Token Donation"}
+                      {loading ? "Processing..." : "Confirm Token Donation"}
                     </Button>
                   </form>
                 </TabsContent>
