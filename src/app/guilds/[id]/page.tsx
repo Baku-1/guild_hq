@@ -72,7 +72,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
       
       <main className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-            <Tabs defaultValue="teams" className="w-full">
+            <Tabs defaultValue="members" className="w-full">
             <TabsList className="grid w-full grid-cols-5 md:grid-cols-9">
                 {TABS.map(tab => (
                      <TabsTrigger key={tab.value} value={tab.value}>
@@ -89,7 +89,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
                 <QuestsTab quests={guild.quests} />
             </TabsContent>
             <TabsContent value="members" className="mt-6">
-                <MembersTab members={guild.members} />
+                <MembersTab members={guild.members} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="proposals" className="mt-6">
                 <ProposalsTab proposals={guild.proposals} />
