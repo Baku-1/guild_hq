@@ -16,11 +16,18 @@ export default async function GuildSelectionPage() {
         </header>
         <main>
           <h2 className="text-3xl font-headline mb-6">Select Your Guild</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {guilds.map((guild) => (
-              <GuildCard key={guild.id} guild={guild} />
-            ))}
-          </div>
+          {guilds.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {guilds.map((guild) => (
+                <GuildCard key={guild.id} guild={guild} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-16">
+              <h3 className="text-xl font-semibold">No Guilds Found</h3>
+              <p>Create a guild to get started.</p>
+            </div>
+          )}
         </main>
       </div>
     </div>

@@ -19,12 +19,19 @@ import { PlusCircle } from "lucide-react";
 export function CreateGuildDialog() {
   const [open, setOpen] = useState(false);
   
-  // In a real app, you would handle form submission to an API here.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // const formData = new FormData(e.currentTarget);
-    // createGuild(formData);
-    console.log("Creating guild...");
+    // TODO: Replace with your API call to create a new guild.
+    // const formData = new FormData(e.currentTarget as HTMLFormElement);
+    // const newGuildData = {
+    //   name: formData.get('name'),
+    //   description: formData.get('description'),
+    //   icon: formData.get('icon'),
+    //   banner: formData.get('banner'),
+    // };
+    // api.createGuild(newGuildData).then(() => setOpen(false));
+    
+    console.log("Form submitted. In a real app, this would call a backend API.");
     setOpen(false);
   };
 

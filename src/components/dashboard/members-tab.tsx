@@ -37,17 +37,20 @@ export function MembersTab({ members: initialMembers, currentUserId }: MembersTa
   const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
-  const handleAction = (action: string, memberName: string) => {
-    // In a real app, you would call an API to perform the action
-    // For now, we'll just show a toast notification and update local state
+  const handleAction = (action: string, memberId: string, memberName: string) => {
+    // TODO: Replace with your API call to perform the action.
+    // e.g., api.kickMember(memberId).then(() => { ... });
+    // After the API call is successful, you should refetch the member list
+    // or update the local state to reflect the change.
+
+    console.log(`${action} on member ${memberId}. In a real app, this would call a backend API.`);
     toast({
       title: `${action} Successful`,
       description: `${memberName} has been ${action.toLowerCase()}.`,
     });
 
-    // Note: State updates would be more complex in a real app,
-    // this is a simplified version for demonstration.
-    // e.g., setMembers(prev => prev.filter(m => m.name !== memberName)) for a kick
+    // Note: State updates would be more complex in a real app and
+    // should ideally be a result of refetching data after a successful API call.
   };
 
   const sortedMembers = [...members].sort((a, b) => b.guildScore - a.guildScore);
@@ -98,16 +101,16 @@ export function MembersTab({ members: initialMembers, currentUserId }: MembersTa
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled={!canPromote} onSelect={() => handleAction('Promoted', member.name)}>
+                          <DropdownMenuItem disabled={!canPromote} onSelect={() => handleAction('Promote', member.id, member.name)}>
                             <ChevronUp className="mr-2 h-4 w-4" />
                             <span>Promote to Officer</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled={!canDemote} onSelect={() => handleAction('Demoted', member.name)}>
+                          <DropdownMenuItem disabled={!canDemote} onSelect={() => handleAction('Demote', member.id, member.name)}>
                             <ChevronDown className="mr-2 h-4 w-4" />
                             <span>Demote to Member</span>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onSelect={() => handleAction('Kicked', member.name)}>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onSelect={() => handleAction('Kick', member.id, member.name)}>
                             <XCircle className="mr-2 h-4 w-4" />
                             <span>Kick Member</span>
                           </DropdownMenuItem>

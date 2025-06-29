@@ -25,9 +25,11 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
     notFound();
   }
 
-  // Mock the current user. In a real app, this would come from an auth context.
-  // User IDs from the database are 'user-1' (Aelar, Guild Master), 'user-2' (Brynn, Treasury Manager), etc.
-  const currentUserId = 'user-1';
+  // TODO: Replace with the actual user's ID from your authentication system.
+  // 'user-1' is a Guild Master (manager view).
+  // 'user-2' is a Treasury Manager (manager view for treasury).
+  // 'user-3' is a Member (non-manager view).
+  const currentUserId = 'user-3';
 
   const TABS = [
     { value: "summary", label: "Summary", icon: Newspaper },
@@ -115,7 +117,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
                 <PrayerTab members={guild.members} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="chat" className="mt-6">
-                <ChatTab messages={guild.chatMessages} />
+                <ChatTab messages={guild.chatMessages} currentUserId={currentUserId} />
             </TabsContent>
             </Tabs>
         </div>

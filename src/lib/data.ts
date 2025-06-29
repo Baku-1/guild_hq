@@ -1,3 +1,7 @@
+// Mock data is limited to a single guild for testing purposes.
+// In a real application, this data would be fetched from a database.
+// Replace the functions below with your actual data fetching logic.
+
 import { CircleUser, Crown, Shield, Banknote } from "lucide-react";
 
 // --- INTERFACES ---
@@ -95,7 +99,7 @@ export interface Guild {
   chatMessages: ChatMessage[];
 }
 
-// --- MOCK DATABASE ---
+// --- MOCK DATABASE (SINGLE GUILD FOR TESTING) ---
 // This simulates a relational database structure.
 
 const db = {
@@ -115,24 +119,6 @@ const db = {
       tags: ['PvE', 'Hardcore'],
       ownerId: 'user-1',
     },
-    '2': {
-        id: '2',
-        name: 'Shadow Syndicate',
-        description: 'Masters of stealth and subterfuge.',
-        iconUrl: 'https://placehold.co/128x128.png',
-        bannerUrl: 'https://placehold.co/600x240.png',
-        tags: ['PvP', 'Competitive'],
-        ownerId: 'user-1',
-    },
-    '3': {
-        id: '3',
-        name: 'Lore Weavers',
-        description: 'Chroniclers of history, explorers of forgotten lands.',
-        iconUrl: 'https://placehold.co/128x128.png',
-        bannerUrl: 'https://placehold.co/600x240.png',
-        tags: ['RP', 'Exploration'],
-        ownerId: 'user-2',
-    }
   },
   guildDetails: {
     '1': {
@@ -190,25 +176,6 @@ const db = {
             { id: 'c3', author: 'Aelar', avatarUrl: 'https://placehold.co/100x100.png', text: 'Welcome to our new member, Lyra! Glad to have you with us.', timestamp: '1m ago'},
         ]
     },
-    // Add details for other guilds...
-    '2': {
-        summary: 'The Shadow Syndicate has been active in the arena, with multiple victories reported. A proposal for a new team composition strategy has been passed unanimously. The marketplace is currently stocked with rare poisons and infiltration tools.',
-        treasury: { tokens: [{ symbol: 'AXS', balance: 210.2 }, { symbol: 'SLP', balance: 340500 }], nfts: [] },
-        members: [
-            { userId: 'user-1', role: 'Guild Master', guildScore: 1250 },
-            { userId: 'user-2', role: 'Officer', guildScore: 980 },
-        ],
-        quests: [], teams: [], proposals: [], marketplace: [], chatMessages: []
-    },
-    '3': {
-        summary: 'The Lore Weavers have uncovered a new ancient ruin, and an expedition is being planned. The guild treasury has been boosted by the sale of several rare artifacts found during recent explorations. A new quest to decipher ancient texts is now available.',
-        treasury: { tokens: [{ symbol: 'AXS', balance: 50.8 }, { symbol: 'SLP', balance: 80200 }], nfts: [] },
-        members: [
-            { userId: 'user-2', role: 'Guild Master', guildScore: 980 },
-            { userId: 'user-4', role: 'Member', guildScore: 620 },
-        ],
-        quests: [], teams: [], proposals: [], marketplace: [], chatMessages: []
-    }
   }
 };
 
@@ -216,8 +183,9 @@ const db = {
 // These functions simulate fetching and combining data from a backend.
 
 export const getGuildById = async (id: string): Promise<Guild | undefined> => {
+  // TODO: Replace with your actual database query.
   const guildInfo = db.guilds[id as keyof typeof db.guilds];
-  const guildDetails = db.guildDetails[id as keyof typeof db.guildDetails];
+  const guildDetails = db.guildDetails[id as keyof typeof db.details];
 
   if (!guildInfo || !guildDetails) {
     return Promise.resolve(undefined);
@@ -257,6 +225,7 @@ export const getGuildById = async (id: string): Promise<Guild | undefined> => {
 };
 
 export const getGuilds = async (): Promise<Guild[]> => {
+  // TODO: Replace with your actual database query.
   const guildIds = Object.keys(db.guilds);
   const guildsPromises = guildIds.map(id => getGuildById(id));
   const guilds = await Promise.all(guildsPromises);

@@ -19,19 +19,19 @@ import { Settings } from "lucide-react";
 
 interface GuildSettingsDialogProps {
   guild: Guild;
-  // A real app would check user permissions before rendering this component
+  // TODO: A real app would check user permissions before rendering this component
   // isManager: boolean;
 }
 
 export function GuildSettingsDialog({ guild }: GuildSettingsDialogProps) {
   const [open, setOpen] = useState(false);
 
-  // In a real app, you would handle form submission to an API here.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // const formData = new FormData(e.currentTarget);
-    // updateGuild(guild.id, formData);
-    console.log("Updating guild settings...");
+    // TODO: Replace with your API call to update guild settings.
+    // const formData = new FormData(e.currentTarget as HTMLFormElement);
+    // api.updateGuild(guild.id, formData).then(() => setOpen(false));
+    console.log("Updating guild settings... In a real app, this would call a backend API.");
     setOpen(false);
   };
 

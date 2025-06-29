@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -53,52 +54,55 @@ export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabPro
   const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Treasury Manager';
 
-  // Mock user's personal NFTs for donation
-  const userNfts = [
-    { id: 'user-axie-1', name: 'Rogue Mech', imageUrl: 'https://placehold.co/150x150.png' },
-    { id: 'user-axie-2', name: 'Aqua Fin', imageUrl: 'https://placehold.co/150x150.png' },
-    { id: 'user-axie-3', name: 'Forest Healer', imageUrl: 'https://placehold.co/150x150.png' },
-  ];
+  // TODO: Replace with an API call to fetch the current user's NFTs.
+  const userNfts: { id: string, name: string, imageUrl: string }[] = [];
 
-  // In a real app, this would trigger a blockchain transaction
   const handleTokenDonate = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // TODO: Replace with a call to the user's wallet to initiate a transaction.
+    // e.g., signAndSendTransaction({ to: guildWallet, amount, token });
     const formData = new FormData(e.currentTarget);
     const token = formData.get('token');
     const amount = formData.get('amount');
-    console.log(`Donating ${amount} ${token}`);
+    console.log(`Donating ${amount} ${token}... In a real app, this would prompt a wallet signature.`);
     
-    // For now, we'll just show a success message
     toast({
-      title: "Donation Received!",
-      description: `Thank you for donating ${amount} ${token} to the guild!`,
+      title: "Donation Submitted!",
+      description: `Please approve the transaction in your wallet to donate ${amount} ${token}.`,
     });
     setDonateOpen(false);
   };
 
   const handleNftDonate = (nftName: string) => {
-     console.log(`Donating ${nftName}`);
+     // TODO: Replace with a call to the user's wallet to initiate an NFT transfer.
+     console.log(`Donating ${nftName}... In a real app, this would prompt a wallet signature.`);
      toast({
-      title: "NFT Received!",
-      description: `Thank you for donating the ${nftName} to the guild vault!`,
+      title: "NFT Donation Submitted!",
+      description: `Please approve the transaction in your wallet to donate ${nftName}.`,
     });
     setDonateOpen(false);
   }
 
   const handleDisburse = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // TODO: Replace with your backend API call for disbursing funds.
+    // This would likely involve a complex form and manager approval.
+    console.log("Disbursing funds... In a real app, this would call a backend API.");
     toast({
       title: "Disbursement Submitted",
-      description: "Funds are being distributed to members.",
+      description: "The disbursement request has been sent for approval.",
     });
     setDisburseOpen(false);
   };
 
   const handleWithdraw = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // TODO: Replace with your backend API call for withdrawing funds.
+    // This would likely involve multi-sig approval for security.
+    console.log("Withdrawing funds... In a real app, this would call a backend API.");
     toast({
       title: "Withdrawal Submitted",
-      description: "Funds are being transferred from the treasury.",
+      description: "The withdrawal request has been sent for approval.",
     });
     setWithdrawOpen(false);
   };
@@ -123,7 +127,7 @@ export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabPro
                       <DialogDescription>Distribute tokens to guild members.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                       <p className="text-sm text-muted-foreground">This would contain a form to select members and amounts to disburse. For now, this is a placeholder.</p>
+                       <p className="text-sm text-muted-foreground">This feature is a placeholder. A real implementation would require a form to select members and amounts to disburse, followed by a secure transaction approval process.</p>
                     </div>
                     <Button type="submit" className="w-full">Confirm Disbursement</Button>
                   </form>
@@ -142,7 +146,7 @@ export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabPro
                       <DialogDescription>Withdraw tokens from the guild treasury to a specified wallet.</DialogDescription>
                     </DialogHeader>
                      <div className="grid gap-4 py-4">
-                       <p className="text-sm text-muted-foreground">This would contain a form for token, amount, and address. For now, this is a placeholder.</p>
+                       <p className="text-sm text-muted-foreground">This feature is a placeholder. A real implementation would require fields for token, amount, and recipient address, followed by a secure transaction approval process (e.g., multi-sig).</p>
                     </div>
                     <Button type="submit" className="w-full">Confirm Withdrawal</Button>
                   </form>
@@ -215,26 +219,32 @@ export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabPro
                       Select one of your NFTs to donate to the guild vault. This action is irreversible.
                     </p>
                     <div className="max-h-[250px] overflow-y-auto pr-2">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {userNfts.map((nft) => (
-                          <div key={nft.id} className="border rounded-lg p-3 flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-3">
-                              <Image
-                                src={nft.imageUrl}
-                                alt={nft.name}
-                                width={48}
-                                height={48}
-                                className="rounded-md bg-muted"
-                                data-ai-hint="axie character"
-                              />
-                              <p className="text-sm font-semibold">{nft.name}</p>
+                      {userNfts.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {userNfts.map((nft) => (
+                            <div key={nft.id} className="border rounded-lg p-3 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <Image
+                                  src={nft.imageUrl}
+                                  alt={nft.name}
+                                  width={48}
+                                  height={48}
+                                  className="rounded-md bg-muted"
+                                  data-ai-hint="axie character"
+                                />
+                                <p className="text-sm font-semibold">{nft.name}</p>
+                              </div>
+                              <Button size="sm" onClick={() => handleNftDonate(nft.name)}>
+                                Donate
+                              </Button>
                             </div>
-                            <Button size="sm" onClick={() => handleNftDonate(nft.name)}>
-                              Donate
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center text-muted-foreground py-8">
+                          <p>You have no NFTs available to donate.</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TabsContent>

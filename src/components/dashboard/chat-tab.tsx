@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import type { ChatMessage } from "@/lib/data";
+import type { ChatMessage, Member } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ChatTabProps {
   messages: ChatMessage[];
+  currentUserId: string;
 }
 
-export function ChatTab({ messages: initialMessages }: ChatTabProps) {
+export function ChatTab({ messages: initialMessages, currentUserId }: ChatTabProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [newMessage, setNewMessage] = useState("");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -22,9 +24,14 @@ export function ChatTab({ messages: initialMessages }: ChatTabProps) {
     e.preventDefault();
     if (newMessage.trim() === "") return;
 
+    // TODO: Replace with your API call to send a chat message.
+    // The API should then return the new message to be added to the state,
+    // or you could use a real-time service like Firebase Firestore.
+
+    // This is a temporary solution for UI testing.
     const message: ChatMessage = {
       id: `msg-${Date.now()}`,
-      author: "You", // In a real app, this would be the current user
+      author: "You", // This should be the current user's name from your auth system.
       avatarUrl: "https://placehold.co/100x100.png",
       text: newMessage,
       timestamp: "Just now",
@@ -34,6 +41,7 @@ export function ChatTab({ messages: initialMessages }: ChatTabProps) {
   };
 
   useEffect(() => {
+    // This scrolls the chat to the bottom when new messages are added.
     if (scrollAreaRef.current) {
       scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight });
     }

@@ -9,35 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Check, Users } from "lucide-react";
 
-// --- Atia's Blessing Contract Details ---
-const ATIA_CONTRACT_ADDRESS = '0x9d3936dbd9a794ee31ef9f13814233d435bd806c';
-const ATIA_ABI = [
-  { inputs: [{ internalType: 'address', name: 'to', type: 'address' }], name: 'activateStreak', outputs: [], stateMutability: 'nonpayable', type: 'function' },
-  {
-    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
-    name: 'getStreak',
-    outputs: [
-      { internalType: 'uint256', name: 'currentStreakCount', type: 'uint256' },
-      { internalType: 'uint256', name: 'lastActivated', type: 'uint256' },
-      { internalType: 'uint256', name: 'longestStreakCount', type: 'uint256' },
-      { internalType: 'uint256', name: 'lostStreakCount', type: 'uint256' },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [{ internalType: 'address', name: 'user', type: 'address' }],
-    name: 'getActivationStatus',
-    outputs: [
-      { internalType: 'bool', name: 'isLostStreak', type: 'bool' },
-      { internalType: 'bool', name: 'hasPrayedToday', type: 'bool' },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-];
-
-
 interface PrayerTabProps {
   members: Member[];
   currentUserId: string;
@@ -59,15 +30,13 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
   useEffect(() => {
     const fetchStatuses = async () => {
       setLoading(true);
-      const statuses: Record<string, PrayerStatus> = {};
+      // TODO: Replace with your actual API call to fetch prayer statuses for all members.
+      // This would involve calling the `getStreak` and `getActivationStatus`
+      // functions on your backend for each member.
+      // e.g., const statuses = await api.getPrayerStatuses(members.map(m => m.walletAddress));
       
-      for (const member of members) {
-        // This is mock data. A real implementation would call the contract for each member.
-        statuses[member.id] = {
-          streak: Math.floor(Math.random() * 100),
-          hasPrayed: Math.random() > 0.5,
-        };
-      }
+      const statuses: Record<string, PrayerStatus> = {};
+      // For now, we leave it empty. The UI will show a loading state.
       
       setPrayerStatus(statuses);
       setLoading(false);
@@ -77,14 +46,20 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
   }, [members]);
 
   const handlePrayForAll = async () => {
+    // TODO: This should trigger a multicall transaction for the manager's wallet to sign.
+    // This keeps the manager's private key secure in their wallet extension.
+    // The transaction would call `activateStreak` for all members who haven't prayed.
+    console.log("Praying for all members... In a real app, this would prompt a wallet signature.");
+
     toast({
         title: "Preparing Batch Prayer...",
         description: `Please review and sign the transaction in your wallet.`,
     });
 
-    // In a real app, this would construct a multicall transaction for the manager's wallet to sign.
-    // This keeps the manager's private key secure in their wallet extension.
+    // This setTimeout simulates the user signing a transaction and the blockchain confirming it.
     setTimeout(() => {
+        // In a real app, you would refetch the prayer statuses after the transaction is confirmed.
+        // For now, we simulate the result for the UI.
         setPrayerStatus(prev => {
             const newStatus = { ...prev };
             members.forEach(member => {
@@ -123,6 +98,8 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <p>Loading prayer statuses...</p>
+        ) : members.length === 0 ? (
+          <p>No members in the guild.</p>
         ) : (
           members.map(member => (
             <Card key={member.id} className={prayerStatus[member.id]?.hasPrayed ? 'bg-green-500/10 border-green-500/20' : ''}>
