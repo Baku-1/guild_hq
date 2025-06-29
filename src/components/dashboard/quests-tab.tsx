@@ -40,6 +40,13 @@ export function QuestsTab({ guildId, quests, currentUser }: QuestsTabProps) {
 
     const handleClaim = async (questId: string) => {
         if (!currentUser) return;
+        
+        const quest = quests.find(q => q.id === questId);
+        if (quest?.claimedBy?.includes(currentUser.id)) {
+            toast({ title: "Already Claimed", description: "You have already claimed this quest.", variant: "destructive" });
+            return;
+        }
+
         setLoading(true);
         const guildDocRef = doc(db, 'guilds', guildId);
         try {
@@ -140,7 +147,7 @@ export function QuestsTab({ guildId, quests, currentUser }: QuestsTabProps) {
         )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {quests.map((quest) => {
+        {quests.length > 0 ? quests.map((quest) => {
           const isClaimedByUser = currentUser && quest.claimedBy?.includes(currentUser.id);
           return (
             <Card key={quest.id} className="flex flex-col">
@@ -155,10 +162,10 @@ export function QuestsTab({ guildId, quests, currentUser }: QuestsTabProps) {
               </CardContent>
               <CardFooter>
                 {isClaimedByUser ? (
-                  <div className="flex items-center text-green-400 font-medium">
+                  <Button variant="outline" disabled className="w-full">
                     <CheckCircle className="mr-2 h-4 w-4" />
-                    You have claimed this
-                  </div>
+                    Claimed
+                  </Button>
                 ) : (
                   <Button onClick={() => handleClaim(quest.id)} className="w-full" disabled={loading || !currentUser}>
                     Claim Quest
@@ -167,7 +174,7 @@ export function QuestsTab({ guildId, quests, currentUser }: QuestsTabProps) {
               </CardFooter>
             </Card>
           )
-        })}
+        }) : <p className="text-muted-foreground col-span-full">The quest board is empty.</p>}
       </div>
     </div>
   );

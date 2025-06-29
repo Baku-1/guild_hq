@@ -56,6 +56,7 @@ export interface Proposal {
   createdAt: string;
   expiresAt: string;
   votes: Record<string, 'for' | 'against'>; // Maps userId to their vote
+  quorum: number; // Participation required for the vote to be valid (e.g. 0.5 for 50%)
 }
 
 
@@ -68,6 +69,9 @@ export interface MarketplaceItem {
         symbol: string;
     };
     imageUrl: string;
+    sellerId: string;
+    sellerName: string;
+    buyerId?: string;
 }
 
 export interface ChatMessage {

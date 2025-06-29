@@ -9,7 +9,7 @@ import type { Proposal, Member } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ThumbsUp, ThumbsDown, PlusCircle, Clock } from "lucide-react";
+import { ThumbsUp, ThumbsDown, PlusCircle, Clock, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
+import { Slider } from '../ui/slider';
 
 interface ProposalsTabProps {
   guildId: string;
@@ -35,6 +36,7 @@ interface ProposalsTabProps {
 export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: ProposalsTabProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [quorum, setQuorum] = useState(50);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -54,7 +56,6 @@ export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: P
 
         const proposal = currentProposals[proposalIndex];
         
-        // Server-side checks
         if (proposal.votes[currentUser.id]) {
             toast({ title: "Already Voted", description: "You have already cast your vote on this proposal.", variant: "destructive" });
             setLoading(false);
@@ -109,6 +110,7 @@ export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: P
         status: 'active',
         createdAt: new Date().toISOString(),
         expiresAt: expires.toISOString(),
+        quorum: quorum / 100, // Store as a decimal (e.g., 0.5)
     };
     
     try {
@@ -162,6 +164,16 @@ export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: P
                             <Label htmlFor="description" className="text-right pt-2">Description</Label>
                             <Textarea id="description" name="description" placeholder="Describe your proposal in detail..." className="col-span-3" required />
                         </div>
+                        <div className="grid grid-cols-4 items-start gap-4">
+                            <Label className="text-right pt-2">Quorum</Label>
+                            <div className="col-span-3">
+                                <p className="text-sm text-muted-foreground">Minimum participation required for the vote to be valid.</p>
+                                <div className="flex items-center gap-4 mt-2">
+                                    <Slider defaultValue={[quorum]} max={100} step={5} onValueChange={(value) => setQuorum(value[0])} />
+                                    <span className="font-mono text-lg w-16 text-center">{quorum}%</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={loading}>{loading ? "Submitting..." : "Submit for Voting"}</Button>
@@ -180,6 +192,9 @@ export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: P
           const userVote = currentUser ? p.votes[currentUser.id] : null;
           const isExpired = new Date() > new Date(p.expiresAt);
 
+          const participation = memberCount > 0 ? totalVotes / memberCount : 0;
+          const quorumMet = participation >= p.quorum;
+
           return (
             <Card key={p.id}>
               <CardHeader>
@@ -196,7 +211,7 @@ export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: P
                   <Progress value={forPercentage} className="h-2" />
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between items-center">
+              <CardFooter className="flex justify-between items-center text-sm text-muted-foreground">
                 <div className="flex gap-2">
                     <Button 
                         size="sm" 
@@ -217,9 +232,15 @@ export function ProposalsTab({ guildId, proposals, currentUser, memberCount }: P
                     <ThumbsDown className="mr-2 h-4 w-4" /> Against
                     </Button>
                 </div>
-                <div className={`text-sm flex items-center gap-2 ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    <Clock className="h-4 w-4" />
-                    {isExpired ? 'Expired' : `${formatDistanceToNowStrict(new Date(p.expiresAt))} left`}
+                <div className="flex flex-col items-end gap-1">
+                    <div className={`flex items-center gap-2 ${isExpired ? 'text-destructive' : ''}`}>
+                        <Clock className="h-4 w-4" />
+                        {isExpired ? 'Expired' : `${formatDistanceToNowStrict(new Date(p.expiresAt))} left`}
+                    </div>
+                     <div className={`flex items-center gap-2 ${quorumMet ? 'text-green-400' : ''}`}>
+                        <Users className="h-4 w-4" />
+                        {totalVotes}/{memberCount} ({Math.round(p.quorum * 100)}% quorum)
+                    </div>
                 </div>
               </CardFooter>
             </Card>
