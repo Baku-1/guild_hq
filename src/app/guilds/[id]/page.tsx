@@ -26,8 +26,8 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
   }
 
   // Mock the current user. In a real app, this would come from an auth context.
-  // '1' is Aelar (Guild Master), '2' is Brynn (Officer), '4' is Lyra (Member/Scholar)
-  const currentUserId = '1';
+  // User IDs from the database are 'user-1' (Aelar, Guild Master), 'user-2' (Brynn, Officer), etc.
+  const currentUserId = 'user-1';
 
   const TABS = [
     { value: "summary", label: "Summary", icon: Newspaper },
