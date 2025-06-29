@@ -2,6 +2,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { Guild } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface GuildSettingsDialogProps {
   guild: Guild;
@@ -25,14 +29,42 @@ interface GuildSettingsDialogProps {
 
 export function GuildSettingsDialog({ guild }: GuildSettingsDialogProps) {
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Replace with your API call to update guild settings.
-    // const formData = new FormData(e.currentTarget as HTMLFormElement);
-    // api.updateGuild(guild.id, formData).then(() => setOpen(false));
-    console.log("Updating guild settings... In a real app, this would call a backend API.");
-    setOpen(false);
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget as HTMLFormElement);
+    const updatedData = {
+      name: formData.get('name') as string,
+      description: formData.get('description') as string,
+      // File uploads would be handled here in a real implementation
+    };
+
+    try {
+      const guildDocRef = doc(db, 'guilds', guild.id);
+      await updateDoc(guildDocRef, updatedData);
+
+      toast({
+        title: "Settings Saved",
+        description: "Your guild's details have been updated.",
+      });
+
+      setOpen(false);
+      router.refresh(); // Re-fetches data on the current page
+    } catch (error) {
+      console.error("Error updating document: ", error);
+      toast({
+        title: "Error",
+        description: "Failed to save settings. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -67,17 +99,17 @@ export function GuildSettingsDialog({ guild }: GuildSettingsDialogProps) {
               <Label htmlFor="icon" className="text-right">
                 New Icon
               </Label>
-              <Input id="icon" name="icon" type="file" className="col-span-3" />
+              <Input id="icon" name="icon" type="file" className="col-span-3" disabled />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="banner" className="text-right">
                 New Banner
               </Label>
-              <Input id="banner" name="banner" type="file" className="col-span-3" />
+              <Input id="banner" name="banner" type="file" className="col-span-3" disabled />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={loading}>{loading ? "Saving..." : "Save Changes"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
