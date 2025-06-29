@@ -72,7 +72,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
       
       <main className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-            <Tabs defaultValue="treasury" className="w-full">
+            <Tabs defaultValue="summary" className="w-full">
             <TabsList className="grid w-full grid-cols-5 md:grid-cols-9">
                 {TABS.map(tab => (
                      <TabsTrigger key={tab.value} value={tab.value}>
