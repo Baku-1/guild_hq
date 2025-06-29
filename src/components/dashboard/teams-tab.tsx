@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
+import { doc, updateDoc, getDoc, arrayUnion, arrayRemove, runTransaction } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Team, Member } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
@@ -29,32 +29,29 @@ interface TeamsTabProps {
   guildId: string;
   initialTeams: Team[];
   members: Member[];
-  currentUserId: string;
+  currentUser?: Member;
 }
 
-export function TeamsTab({ guildId, initialTeams, members, currentUserId }: TeamsTabProps) {
-  const [teams, setTeams] = useState(initialTeams);
+export function TeamsTab({ guildId, initialTeams, members, currentUser }: TeamsTabProps) {
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   const membersMap = new Map(members.map(m => [m.id, m]));
-  const currentUser = membersMap.get(currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
-  const updateTeamInFirestore = async (teamId: string, updates: Partial<Team>) => {
+  const updateTeamInFirestore = async (teamId: string, updates: (teams: Team[]) => Team[]) => {
     setLoading(true);
     const guildDocRef = doc(db, 'guilds', guildId);
     try {
-      const docSnap = await getDoc(guildDocRef);
-      if (!docSnap.exists()) throw new Error("Guild not found");
-
-      const currentTeams = docSnap.data().teams as Team[];
-      const updatedTeams = currentTeams.map(t =>
-        t.id === teamId ? { ...t, ...updates } : t
-      );
-      await updateDoc(guildDocRef, { teams: updatedTeams });
+      await runTransaction(db, async (transaction) => {
+        const guildDoc = await transaction.get(guildDocRef);
+        if (!guildDoc.exists()) throw new Error("Guild not found");
+        const currentTeams = guildDoc.data().teams as Team[];
+        const updatedTeams = updates(currentTeams);
+        transaction.update(guildDocRef, { teams: updatedTeams });
+      });
       router.refresh();
       return true;
     } catch (error) {
@@ -67,30 +64,42 @@ export function TeamsTab({ guildId, initialTeams, members, currentUserId }: Team
   };
 
   const handleApply = async (teamId: string) => {
-    const success = await updateTeamInFirestore(teamId, { 
-        applicants: arrayUnion(currentUserId) as any 
-    });
+    if (!currentUser) return;
+    const success = await updateTeamInFirestore(teamId, (currentTeams) =>
+      currentTeams.map(t =>
+        t.id === teamId ? { ...t, applicants: arrayUnion(currentUser.id) as any } : t
+      )
+    );
     if (success) toast({ title: "Applied!", description: "Your application has been submitted." });
   };
 
   const handleApprove = async (teamId: string, applicantId: string) => {
-    const success = await updateTeamInFirestore(teamId, { scholarId: applicantId, applicants: [] });
+    const success = await updateTeamInFirestore(teamId, (currentTeams) =>
+      currentTeams.map(t =>
+        t.id === teamId ? { ...t, scholarId: applicantId, applicants: [] } : t
+      )
+    );
     if (success) toast({ title: "Scholar Approved", description: "The team has been assigned." });
   };
 
   const handleUnassign = async (teamId: string) => {
-    const success = await updateTeamInFirestore(teamId, { scholarId: undefined });
+     const success = await updateTeamInFirestore(teamId, (currentTeams) =>
+      currentTeams.map(t =>
+        t.id === teamId ? { ...t, scholarId: undefined } : t
+      )
+    );
     if (success) toast({ title: "Scholar Unassigned", description: "The team is now available." });
   };
 
   const handleCreateTeam = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!currentUser) return;
     setLoading(true);
     const formData = new FormData(event.currentTarget);
     const newTeam: Team = {
       id: `team-${Date.now()}`,
       name: formData.get('name') as string,
-      managerId: currentUserId,
+      managerId: currentUser.id,
       walletAddress: formData.get('walletAddress') as string,
       encryptedPassword: formData.get('password') as string,
       axies: (formData.get('axies') as string)
@@ -160,12 +169,12 @@ export function TeamsTab({ guildId, initialTeams, members, currentUserId }: Team
         )}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {teams.map((team) => {
+        {initialTeams.map((team) => {
           const manager = membersMap.get(team.managerId);
           const scholar = team.scholarId ? membersMap.get(team.scholarId) : null;
-          const isCurrentUserApplicant = team.applicants.includes(currentUserId);
-          const isCurrentUserScholar = team.scholarId === currentUserId;
-          const isCurrentUserManager = team.managerId === currentUserId;
+          const isCurrentUserApplicant = currentUser && team.applicants.includes(currentUser.id);
+          const isCurrentUserScholar = currentUser && team.scholarId === currentUser.id;
+          const isCurrentUserManager = currentUser && team.managerId === currentUser.id;
 
           return (
             <Card key={team.id} className="flex flex-col">
@@ -244,13 +253,13 @@ export function TeamsTab({ guildId, initialTeams, members, currentUserId }: Team
                 ) : isCurrentUserApplicant ? (
                   <Button className="w-full" disabled>Application Pending</Button>
                 ) : (
-                  <Button className="w-full" onClick={() => handleApply(team.id)} disabled={loading}>Apply for this Team</Button>
+                  <Button className="w-full" onClick={() => handleApply(team.id)} disabled={loading || !currentUser}>Apply for this Team</Button>
                 )}
               </CardFooter>
             </Card>
           )
         })}
-        {teams.length === 0 && <p className="text-muted-foreground col-span-full">No teams have been created yet.</p>}
+        {initialTeams.length === 0 && <p className="text-muted-foreground col-span-full">No teams have been created yet.</p>}
       </div>
     </div>
   );

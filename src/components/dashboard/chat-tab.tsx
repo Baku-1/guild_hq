@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { ChatMessage, Member } from "@/lib/data";
@@ -17,31 +16,28 @@ import { useToast } from "@/hooks/use-toast";
 interface ChatTabProps {
   guildId: string;
   initialMessages: ChatMessage[];
-  currentUserId: string;
+  currentUser?: Member;
   members: Member[];
 }
 
-export function ChatTab({ guildId, initialMessages, currentUserId, members }: ChatTabProps) {
+export function ChatTab({ guildId, initialMessages, currentUser, members }: ChatTabProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const router = useRouter();
-
-  const membersMap = new Map(members.map(m => [m.id, m]));
-  const currentUser = membersMap.get(currentUserId);
 
   useEffect(() => {
-    // Set up a real-time listener for chat messages
     const guildDocRef = doc(db, 'guilds', guildId);
     const unsubscribe = onSnapshot(guildDocRef, (doc) => {
       if (doc.exists()) {
-        setMessages(doc.data().chatMessages || []);
+        const data = doc.data();
+        setMessages(data.chatMessages || []);
       }
+    }, (error) => {
+        console.error("Error listening to chat updates:", error);
     });
 
-    // Cleanup the listener when the component unmounts
     return () => unsubscribe();
   }, [guildId]);
 
@@ -52,7 +48,7 @@ export function ChatTab({ guildId, initialMessages, currentUserId, members }: Ch
     setLoading(true);
 
     const message: ChatMessage = {
-      id: `msg-${Date.now()}`, // Firestore doesn't need this, but good for keys
+      id: `msg-${Date.now()}`,
       authorId: currentUser.id,
       author: currentUser.name,
       avatarUrl: currentUser.avatarUrl,
@@ -79,7 +75,6 @@ export function ChatTab({ guildId, initialMessages, currentUserId, members }: Ch
   };
 
   useEffect(() => {
-    // This scrolls the chat to the bottom when new messages are added.
     if (scrollAreaRef.current) {
       setTimeout(() => {
          scrollAreaRef.current?.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
@@ -119,12 +114,12 @@ export function ChatTab({ guildId, initialMessages, currentUserId, members }: Ch
           <form onSubmit={handleSendMessage} className="flex w-full items-center space-x-2">
             <Input
               type="text"
-              placeholder="Type a message..."
+              placeholder={currentUser ? "Type a message..." : "You must be a member to chat"}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              disabled={loading}
+              disabled={loading || !currentUser}
             />
-            <Button type="submit" size="icon" disabled={loading}>
+            <Button type="submit" size="icon" disabled={loading || !currentUser}>
               <Send className="h-4 w-4" />
             </Button>
           </form>

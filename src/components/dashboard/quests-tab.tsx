@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Quest } from "@/lib/data";
+import type { Quest, Member } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, PlusCircle, Star } from "lucide-react";
@@ -27,17 +27,19 @@ import { useToast } from '@/hooks/use-toast';
 interface QuestsTabProps {
   guildId: string;
   quests: Quest[];
-  currentUserId: string;
+  currentUser?: Member;
 }
 
-export function QuestsTab({ guildId, quests: initialQuests, currentUserId }: QuestsTabProps) {
-    const [quests, setQuests] = useState(initialQuests);
+export function QuestsTab({ guildId, quests, currentUser }: QuestsTabProps) {
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const router = useRouter();
 
+    const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
+
     const handleClaim = async (questId: string) => {
+        if (!currentUser) return;
         setLoading(true);
         const guildDocRef = doc(db, 'guilds', guildId);
         try {
@@ -47,9 +49,8 @@ export function QuestsTab({ guildId, quests: initialQuests, currentUserId }: Que
             const currentQuests = docSnap.data().quests as Quest[];
             const updatedQuests = currentQuests.map(q => {
                 if (q.id === questId) {
-                    // This uses a Set to avoid duplicate claimants
                     const claimants = new Set(q.claimedBy || []);
-                    claimants.add(currentUserId);
+                    claimants.add(currentUser.id);
                     return { ...q, claimedBy: Array.from(claimants) };
                 }
                 return q;
@@ -100,45 +101,47 @@ export function QuestsTab({ guildId, quests: initialQuests, currentUserId }: Que
     <div>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-headline">Quest Board</h2>
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Create Quest
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <form onSubmit={handleCreateQuest}>
-                <DialogHeader>
-                    <DialogTitle className="font-headline">Create a new Quest</DialogTitle>
-                    <DialogDescription>
-                        Set a new challenge for your guild members.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="title" className="text-right">Title</Label>
-                        <Input id="title" name="title" placeholder="Quest title" className="col-span-3" required />
+        {isManager && (
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Create Quest
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                <form onSubmit={handleCreateQuest}>
+                    <DialogHeader>
+                        <DialogTitle className="font-headline">Create a new Quest</DialogTitle>
+                        <DialogDescription>
+                            Set a new challenge for your guild members.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="title" className="text-right">Title</Label>
+                            <Input id="title" name="title" placeholder="Quest title" className="col-span-3" required />
+                        </div>
+                        <div className="grid grid-cols-4 items-start gap-4">
+                            <Label htmlFor="description" className="text-right pt-2">Description</Label>
+                            <Textarea id="description" name="description" placeholder="Describe the quest in detail..." className="col-span-3" required/>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="reward" className="text-right">Reward (GS)</Label>
+                            <Input id="reward" name="reward" type="number" placeholder="e.g. 500" className="col-span-3" required/>
+                        </div>
                     </div>
-                    <div className="grid grid-cols-4 items-start gap-4">
-                        <Label htmlFor="description" className="text-right pt-2">Description</Label>
-                        <Textarea id="description" name="description" placeholder="Describe the quest in detail..." className="col-span-3" required/>
-                    </div>
-                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="reward" className="text-right">Reward (GS)</Label>
-                        <Input id="reward" name="reward" type="number" placeholder="e.g. 500" className="col-span-3" required/>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button type="submit" disabled={loading}>{loading ? "Creating..." : "Post Quest"}</Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-        </Dialog>
+                    <DialogFooter>
+                        <Button type="submit" disabled={loading}>{loading ? "Creating..." : "Post Quest"}</Button>
+                    </DialogFooter>
+                </form>
+                </DialogContent>
+            </Dialog>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {quests.map((quest) => {
-          const isClaimedByUser = quest.claimedBy?.includes(currentUserId);
+          const isClaimedByUser = currentUser && quest.claimedBy?.includes(currentUser.id);
           return (
             <Card key={quest.id} className="flex flex-col">
               <CardHeader>
@@ -157,7 +160,7 @@ export function QuestsTab({ guildId, quests: initialQuests, currentUserId }: Que
                     You have claimed this
                   </div>
                 ) : (
-                  <Button onClick={() => handleClaim(quest.id)} className="w-full" disabled={loading}>
+                  <Button onClick={() => handleClaim(quest.id)} className="w-full" disabled={loading || !currentUser}>
                     Claim Quest
                   </Button>
                 )}

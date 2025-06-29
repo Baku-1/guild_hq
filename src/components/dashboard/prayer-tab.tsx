@@ -13,7 +13,7 @@ import { ATIA_CONTRACT_ADDRESS, ATIA_ABI } from "@/lib/ronin";
 
 interface PrayerTabProps {
   members: Member[];
-  currentUserId: string;
+  currentUser?: Member;
 }
 
 interface PrayerStatus {
@@ -21,13 +21,12 @@ interface PrayerStatus {
   hasPrayed: boolean;
 }
 
-export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
+export function PrayerTab({ members, currentUser }: PrayerTabProps) {
   const [prayerStatus, setPrayerStatus] = useState<Record<string, PrayerStatus>>({});
   const [loading, setLoading] = useState(true);
   const [txPending, setTxPending] = useState(false);
   const { toast } = useToast();
 
-  const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
   const fetchPrayerStatuses = async () => {
@@ -75,11 +74,16 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
   };
 
   useEffect(() => {
-    fetchPrayerStatuses();
+    if (members.length > 0) {
+        fetchPrayerStatuses();
+    } else {
+        setLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members]);
 
   const handlePrayForAll = async () => {
-    if (!window.ethereum) {
+    if (!(window as any).ethereum) {
         toast({ title: "Wallet Not Found", description: "Please install a browser wallet like Ronin Wallet.", variant: "destructive" });
         return;
     }
@@ -94,7 +98,7 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
     setTxPending(true);
 
     try {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        const provider = new ethers.BrowserProvider((window as any).ethereum);
         const signer = await provider.getSigner();
         const atiaContract = new ethers.Contract(ATIA_CONTRACT_ADDRESS, ATIA_ABI, signer);
 
@@ -108,6 +112,7 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
         for (const member of membersToPrayFor) {
             try {
                 const tx = await atiaContract.activateStreak(member.walletAddress);
+                toast({ title: `Transaction Sent for ${member.name}`, description: `Waiting for confirmation...`, duration: 2000 });
                 await tx.wait();
                 toast({ title: `Prayer Successful for ${member.name}`, description: `${member.name} has received Atia's Blessing.` });
             } catch(memberError: any) {
@@ -116,7 +121,6 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
             }
         }
         
-        // Refetch statuses after all transactions are attempted.
         await fetchPrayerStatuses();
 
     } catch (error: any) {
@@ -173,7 +177,7 @@ export function PrayerTab({ members, currentUserId }: PrayerTabProps) {
                     <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold">{member.name} {member.id === currentUserId ? '(You)' : ''}</p>
+                    <p className="font-semibold">{member.name} {currentUser && member.id === currentUser.id ? '(You)' : ''}</p>
                     <p className="text-sm text-muted-foreground">
                       Streak: <span className="font-bold text-primary">{prayerStatus[member.id]?.streak ?? 'N/A'}</span>
                     </p>

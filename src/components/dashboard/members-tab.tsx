@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { doc, updateDoc, arrayRemove, getDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Member } from "@/lib/data";
 import { getRoleIcon } from "@/lib/data";
@@ -31,16 +31,14 @@ import { useToast } from "@/hooks/use-toast";
 interface MembersTabProps {
   guildId: string;
   members: Member[];
-  currentUserId: string;
+  currentUser?: Member;
 }
 
-export function MembersTab({ guildId, members: initialMembers, currentUserId }: MembersTabProps) {
-  const [members, setMembers] = useState(initialMembers);
+export function MembersTab({ guildId, members, currentUser }: MembersTabProps) {
   const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   
-  const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
   const handleAction = async (action: 'Promote' | 'Demote' | 'Kick', member: Member) => {
@@ -48,24 +46,23 @@ export function MembersTab({ guildId, members: initialMembers, currentUserId }: 
     const guildDocRef = doc(db, 'guilds', guildId);
 
     try {
-      if (action === 'Kick') {
-        await updateDoc(guildDocRef, {
-          members: arrayRemove(member)
-        });
-      } else {
         const docSnap = await getDoc(guildDocRef);
         if (!docSnap.exists()) throw new Error("Guild not found");
         
         const currentMembers = docSnap.data().members as Member[];
-        const updatedMembers = currentMembers.map(m => {
-          if (m.id === member.id) {
-            return { ...m, role: action === 'Promote' ? 'Officer' : 'Member' };
-          }
-          return m;
-        });
+        let updatedMembers: Member[];
 
+        if (action === 'Kick') {
+            updatedMembers = currentMembers.filter(m => m.id !== member.id);
+        } else {
+            updatedMembers = currentMembers.map(m => {
+              if (m.id === member.id) {
+                return { ...m, role: action === 'Promote' ? 'Officer' : 'Member' };
+              }
+              return m;
+            });
+        }
         await updateDoc(guildDocRef, { members: updatedMembers });
-      }
 
       toast({
         title: `${action} Successful`,
@@ -124,7 +121,7 @@ export function MembersTab({ guildId, members: initialMembers, currentUserId }: 
                   </TableCell>
                   <TableCell className="text-right font-mono">{member.guildScore}</TableCell>
                   <TableCell className="text-right">
-                    {isManager && member.id !== currentUserId ? (
+                    {isManager && currentUser && member.id !== currentUser.id ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" disabled={isLoading}>

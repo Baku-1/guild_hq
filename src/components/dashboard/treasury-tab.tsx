@@ -30,13 +30,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ethers } from "ethers";
 
 interface TreasuryTabProps {
   guildId: string;
   treasury: Guild['treasury'];
   members: Member[];
-  currentUserId: string;
+  currentUser?: Member;
 }
 
 const getTokenIcon = (symbol: string): React.ComponentType<LucideProps> => {
@@ -50,7 +49,7 @@ const getTokenIcon = (symbol: string): React.ComponentType<LucideProps> => {
     }
 }
 
-export function TreasuryTab({ guildId, treasury, members, currentUserId }: TreasuryTabProps) {
+export function TreasuryTab({ guildId, treasury, members, currentUser }: TreasuryTabProps) {
   const [donateOpen, setDonateOpen] = useState(false);
   const [disburseOpen, setDisburseOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -58,16 +57,17 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
   const { toast } = useToast();
   const router = useRouter();
 
-  const currentUser = members.find(m => m.id === currentUserId);
-  const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Treasury Manager';
-
-  const userNfts: TreasuryNft[] = [
-    { id: 'nft-1', name: "Mystic Axie", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUserId },
-    { id: 'nft-2', name: "Jade Reptile", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUserId },
-  ];
+  const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Treasury Manager' || currentUser?.role === 'Officer';
+  
+  // This is mock data. In a real app, you'd fetch this from the user's wallet.
+  const userNfts: TreasuryNft[] = currentUser ? [
+    { id: 'nft-1', name: "Mystic Axie", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUser.id },
+    { id: 'nft-2', name: "Jade Reptile", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUser.id },
+  ] : [];
 
   const handleTokenDonate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!currentUser) return;
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
@@ -80,24 +80,8 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
     });
 
     try {
-        // In a real Web3 app, you would first trigger a transaction for the user
-        // to approve and send the tokens to the guild treasury contract.
-        // This is a placeholder for that logic.
-        // 1. Connect to user's wallet (e.g., using ethers)
-        // const provider = new ethers.BrowserProvider(window.ethereum);
-        // const signer = await provider.getSigner();
-        
-        // 2. Get the token contract instance (address would come from a config)
-        // const tokenContract = new ethers.Contract(TOKEN_CONTRACT_ADDRESS, ERC20_ABI, signer);
-        
-        // 3. Request the user to sign and send the transaction
-        // const tx = await tokenContract.transfer(GUILD_TREASURY_ADDRESS, ethers.parseUnits(amount.toString(), TOKEN_DECIMALS));
-        // await tx.wait();
-        
-        // 4. Only after the transaction is confirmed, update the Firestore database.
-        // The following code simulates the backend update after a successful transaction.
         console.log(`Simulating transaction for donating ${amount} ${tokenSymbol}...`);
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate tx delay
+        await new Promise(resolve => setTimeout(resolve, 1500)); 
 
         const guildDocRef = doc(db, 'guilds', guildId);
         const docSnap = await getDoc(guildDocRef);
@@ -136,13 +120,8 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
      });
 
      try {
-        // This would be similar to the token donation flow, but for an ERC721 token.
-        // 1. Get signer from wallet
-        // 2. Get NFT contract instance
-        // 3. Call `transferFrom(userAddress, guildTreasuryAddress, nft.id)`
-        // 4. After tx confirmation, update Firestore.
         console.log(`Simulating transaction for donating NFT ${nft.name}...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
         const guildDocRef = doc(db, 'guilds', guildId);
         await updateDoc(guildDocRef, {
@@ -188,7 +167,6 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
         <div className="flex gap-2">
           {isManager && (
             <>
-              {/* Disburse Dialog */}
               <Dialog open={disburseOpen} onOpenChange={setDisburseOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline"><HandCoins className="mr-2 h-4 w-4" /> Disburse</Button>
@@ -207,7 +185,6 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
                 </DialogContent>
               </Dialog>
 
-              {/* Withdrawal Dialog */}
               <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline"><Landmark className="mr-2 h-4 w-4" /> Withdraw</Button>
@@ -227,11 +204,9 @@ export function TreasuryTab({ guildId, treasury, members, currentUserId }: Treas
               </Dialog>
             </>
           )}
-
-          {/* Donate Dialog (existing) */}
           <Dialog open={donateOpen} onOpenChange={setDonateOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={!currentUser}>
                 <Gift className="mr-2 h-4 w-4" />
                 Donate
               </Button>

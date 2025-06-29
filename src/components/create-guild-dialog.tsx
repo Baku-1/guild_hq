@@ -20,29 +20,33 @@ import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Guild, Member } from "@/lib/data";
+import { useAuth } from "@/contexts/auth-context";
 
 export function CreateGuildDialog() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+        toast({ title: "Not Authenticated", description: "You must be logged in to create a guild.", variant: "destructive" });
+        return;
+    }
     setLoading(true);
 
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const guildName = formData.get('name') as string;
     const guildDescription = formData.get('description') as string;
 
-    // This is a placeholder for your authentication system.
-    // In a real application, you would get the current user's ID and name from a session.
     const guildCreator: Member = {
-      id: 'user-1',
-      name: 'Guild Master',
+      id: user.uid,
+      name: user.displayName || 'Guild Master',
       role: 'Guild Master',
       guildScore: 1000,
-      avatarUrl: 'https://placehold.co/100x100.png',
+      avatarUrl: user.photoURL || 'https://placehold.co/100x100.png',
       walletAddress: '0x0000000000000000000000000000000000000001' // Placeholder address
     }
 
@@ -66,8 +70,6 @@ export function CreateGuildDialog() {
     };
 
     try {
-      // In a real app, you would also handle file uploads to Firebase Storage for icon/banner
-      // and get the download URLs before creating the document.
       const docRef = await addDoc(collection(db, "guilds"), newGuildData);
       console.log("Document written with ID: ", docRef.id);
       
@@ -94,7 +96,7 @@ export function CreateGuildDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button disabled={!user}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Create Guild
         </Button>
@@ -134,7 +136,7 @@ export function CreateGuildDialog() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !user}>
               {loading ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>

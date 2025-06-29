@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, arrayUnion, getDoc, increment } from 'firebase/firestore';
+import { doc, updateDoc, arrayUnion, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Proposal, Member } from "@/lib/data";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,10 +27,10 @@ import { useToast } from '@/hooks/use-toast';
 interface ProposalsTabProps {
   guildId: string;
   proposals: Proposal[];
-  currentUserId: string;
+  currentUser?: Member;
 }
 
-export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTabProps) {
+export function ProposalsTab({ guildId, proposals, currentUser }: ProposalsTabProps) {
   const [voted, setVoted] = useState<Record<string, 'for' | 'against' | null>>({});
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,10 +38,8 @@ export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTab
   const router = useRouter();
 
   const handleVote = async (proposalId: string, vote: 'for' | 'against') => {
-    if (voted[proposalId]) return;
+    if (voted[proposalId] || !currentUser) return;
 
-    // This is a simplistic implementation. A real app would need to check
-    // if the user has already voted on the backend.
     setVoted({ ...voted, [proposalId]: vote });
 
     const guildDocRef = doc(db, 'guilds', guildId);
@@ -76,13 +74,13 @@ export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTab
             description: "Failed to cast vote. Please try again.",
             variant: "destructive"
         });
-        // Revert optimistic UI update
         setVoted({ ...voted, [proposalId]: null });
     }
   };
 
   const handleCreateProposal = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!currentUser) return;
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
@@ -93,7 +91,7 @@ export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTab
         id: `prop-${Date.now()}`,
         title,
         description,
-        proposer: "Current User", // In real app, get user name from auth
+        proposer: currentUser.name,
         votesFor: 0,
         votesAgainst: 0,
         status: 'active'
@@ -128,7 +126,7 @@ export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTab
         <h2 className="text-2xl font-headline">Governance</h2>
          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button disabled={!currentUser}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     New Proposal
                 </Button>
@@ -182,7 +180,7 @@ export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTab
                 <Button 
                     size="sm" 
                     onClick={() => handleVote(p.id, 'for')} 
-                    disabled={p.status !== 'active' || !!voted[p.id]}
+                    disabled={p.status !== 'active' || !!voted[p.id] || !currentUser}
                     variant={voted[p.id] === 'for' ? 'default' : 'outline'}
                     className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30 hover:text-green-300 disabled:opacity-50"
                 >
@@ -191,7 +189,7 @@ export function ProposalsTab({ guildId, proposals, currentUserId }: ProposalsTab
                 <Button 
                     size="sm" 
                     onClick={() => handleVote(p.id, 'against')} 
-                    disabled={p.status !== 'active' || !!voted[p.id]}
+                    disabled={p.status !== 'active' || !!voted[p.id] || !currentUser}
                     variant={voted[p.id] === 'against' ? 'default' : 'outline'}
                     className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30 hover:text-red-300 disabled:opacity-50"
                 >
