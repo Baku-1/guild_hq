@@ -25,6 +25,11 @@ export interface Axie {
 export interface Team {
   id: string;
   name: string;
+  managerId: string;
+  scholarId?: string;
+  applicants: string[];
+  walletAddress: string;
+  encryptedPassword?: string;
   axies: Axie[];
 }
 
@@ -93,16 +98,48 @@ const mockQuests: Quest[] = [
 ];
 
 const mockTeams: Team[] = [
-    { id: 't1', name: 'Alpha Squad', axies: [
-        { id: 'a1', name: 'Beast Axie', imageUrl: 'https://placehold.co/150x150.png' },
-        { id: 'a2', name: 'Aqua Axie', imageUrl: 'https://placehold.co/150x150.png' },
-        { id: 'a3', name: 'Plant Axie', imageUrl: 'https://placehold.co/150x150.png' },
-    ]},
-    { id: 't2', name: 'Omega Force', axies: [
-        { id: 'a4', name: 'Reptile Axie', imageUrl: 'https://placehold.co/150x150.png' },
-        { id: 'a5', name: 'Bird Axie', imageUrl: 'https://placehold.co/150x150.png' },
-        { id: 'a6', name: 'Bug Axie', imageUrl: 'https://placehold.co/150x150.png' },
-    ]},
+    {
+      id: 't1',
+      name: 'Aqua Force',
+      managerId: '1', // Aelar
+      scholarId: '3', // Kael is assigned
+      applicants: [],
+      walletAddress: 'ronin:1111222233334444',
+      encryptedPassword: 'ultra-secure-password-1',
+      axies: [
+          { id: 'a1', name: 'Beast Axie', imageUrl: 'https://placehold.co/150x150.png' },
+          { id: 'a2', name: 'Aqua Axie', imageUrl: 'https://placehold.co/150x150.png' },
+          { id: 'a3', name: 'Plant Axie', imageUrl: 'https://placehold.co/150x150.png' },
+      ]
+    },
+    {
+      id: 't2',
+      name: 'Reptile Rush',
+      managerId: '2', // Brynn
+      scholarId: undefined,
+      applicants: ['4'], // Lyra has applied
+      walletAddress: 'ronin:5555666677778888',
+      encryptedPassword: 'another-secret-password',
+      axies: [
+          { id: 'a4', name: 'Reptile Axie', imageUrl: 'https://placehold.co/150x150.png' },
+          { id: 'a5', name: 'Bird Axie', imageUrl: 'https://placehold.co/150x150.png' },
+          { id: 'a6', name: 'Bug Axie', imageUrl: 'https://placehold.co/150x150.png' },
+      ]
+    },
+     {
+        id: 't3',
+        name: 'Midnight Mayhem',
+        managerId: '1', // Aelar
+        scholarId: undefined,
+        applicants: [],
+        walletAddress: 'ronin:99990000aaaabbbb',
+        encryptedPassword: 'password-for-team-3',
+        axies: [
+            { id: 'a7', name: 'Dusk Axie', imageUrl: 'https://placehold.co/150x150.png' },
+            { id: 'a8', name: 'Mech Axie', imageUrl: 'https://placehold.co/150x150.png' },
+            { id: 'a9', name: 'Dawn Axie', imageUrl: 'https://placehold.co/150x150.png' },
+        ]
+    }
 ];
 
 const mockProposals: Proposal[] = [

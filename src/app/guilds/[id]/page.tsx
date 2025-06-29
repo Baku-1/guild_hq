@@ -22,6 +22,10 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
     notFound();
   }
 
+  // Mock the current user. In a real app, this would come from an auth context.
+  // '1' is Aelar (Guild Master), '2' is Brynn (Officer), '4' is Lyra (Member/Scholar)
+  const currentUserId = '1';
+
   const TABS = [
     { value: "summary", label: "Summary", icon: Newspaper },
     { value: "quests", label: "Quests", icon: Swords },
@@ -66,7 +70,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
       
       <main className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
-            <Tabs defaultValue="summary" className="w-full">
+            <Tabs defaultValue="teams" className="w-full">
             <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
                 {TABS.map(tab => (
                      <TabsTrigger key={tab.value} value={tab.value}>
@@ -89,7 +93,11 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
                 <ProposalsTab proposals={guild.proposals} />
             </TabsContent>
             <TabsContent value="teams" className="mt-6">
-                <TeamsTab teams={guild.teams} />
+                <TeamsTab 
+                  initialTeams={guild.teams} 
+                  members={guild.members} 
+                  currentUserId={currentUserId}
+                />
             </TabsContent>
             <TabsContent value="treasury" className="mt-6">
                 <TreasuryTab treasury={guild.treasury} />
