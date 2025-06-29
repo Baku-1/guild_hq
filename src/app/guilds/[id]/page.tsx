@@ -1,9 +1,10 @@
+
 import { getGuildById } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Bell, Swords, Users, Vote, Shield, Coins, Store, MessageSquare, Newspaper } from 'lucide-react';
+import { ArrowLeft, Bell, Swords, Users, Vote, Shield, Coins, Store, MessageSquare, Newspaper } from 'lucide-react';
 import Link from 'next/link';
 
 import { SummaryTab } from '@/components/dashboard/summary-tab';
@@ -14,6 +15,7 @@ import { TeamsTab } from '@/components/dashboard/teams-tab';
 import { ProposalsTab } from '@/components/dashboard/proposals-tab';
 import { MarketplaceTab } from '@/components/dashboard/marketplace-tab';
 import { ChatTab } from '@/components/dashboard/chat-tab';
+import { GuildSettingsDialog } from '@/components/guild-settings-dialog';
 
 export default async function GuildDashboardPage({ params }: { params: { id: string } }) {
   const guild = await getGuildById(params.id);
@@ -53,9 +55,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
             <Button variant="outline" size="icon" className="bg-background/50 hover:bg-background">
                 <Bell className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="icon" className="bg-background/50 hover:bg-background">
-                <Settings className="h-4 w-4" />
-            </Button>
+            <GuildSettingsDialog guild={guild} />
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8">
             <div className="flex items-end gap-4 max-w-7xl mx-auto">
