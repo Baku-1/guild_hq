@@ -25,10 +25,9 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
     notFound();
   }
 
-  // TODO: Replace with the actual user's ID from your authentication system.
-  // 'user-1' is a Guild Master (manager view).
-  // 'user-2' is a Treasury Manager (manager view for treasury).
-  // 'user-3' is a Member (non-manager view).
+  // This is a placeholder for your authentication system.
+  // In a real application, you would get the current user's ID from a session.
+  // 'user-1' is a Guild Master, which makes all manager buttons visible for testing.
   const currentUserId = 'user-1';
 
   const TABS = [
@@ -88,16 +87,17 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
                 <SummaryTab summary={guild.summary} />
             </TabsContent>
             <TabsContent value="quests" className="mt-6">
-                <QuestsTab quests={guild.quests} />
+                <QuestsTab guildId={guild.id} quests={guild.quests} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="members" className="mt-6">
-                <MembersTab members={guild.members} currentUserId={currentUserId} />
+                <MembersTab guildId={guild.id} members={guild.members} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="proposals" className="mt-6">
-                <ProposalsTab proposals={guild.proposals} />
+                <ProposalsTab guildId={guild.id} proposals={guild.proposals} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="teams" className="mt-6">
                 <TeamsTab 
+                  guildId={guild.id}
                   initialTeams={guild.teams} 
                   members={guild.members} 
                   currentUserId={currentUserId}
@@ -105,6 +105,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
             </TabsContent>
             <TabsContent value="treasury" className="mt-6">
                 <TreasuryTab 
+                    guildId={guild.id}
                     treasury={guild.treasury}
                     members={guild.members}
                     currentUserId={currentUserId}
@@ -117,7 +118,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
                 <PrayerTab members={guild.members} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="chat" className="mt-6">
-                <ChatTab messages={guild.chatMessages} currentUserId={currentUserId} />
+                <ChatTab guildId={guild.id} initialMessages={guild.chatMessages} currentUserId={currentUserId} members={guild.members} />
             </TabsContent>
             </Tabs>
         </div>

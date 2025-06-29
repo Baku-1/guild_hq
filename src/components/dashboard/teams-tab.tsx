@@ -1,10 +1,14 @@
+
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { doc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { Team, Member } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Shield, UserCheck, UserX, KeyRound, Check, Users } from "lucide-react";
+import { PlusCircle, Shield, UserCheck, UserX, KeyRound, Check } from "lucide-react";
 import Image from 'next/image';
 import {
   Dialog,
@@ -19,47 +23,69 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Separator } from "../ui/separator";
+import { useToast } from "@/hooks/use-toast";
 
 interface TeamsTabProps {
+  guildId: string;
   initialTeams: Team[];
   members: Member[];
   currentUserId: string;
 }
 
-export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps) {
+export function TeamsTab({ guildId, initialTeams, members, currentUserId }: TeamsTabProps) {
   const [teams, setTeams] = useState(initialTeams);
   const [isCreateDialogOpen, setCreateDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   const membersMap = new Map(members.map(m => [m.id, m]));
   const currentUser = membersMap.get(currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
-  const handleApply = (teamId: string) => {
-    setTeams(teams.map(t => 
-      t.id === teamId 
-        ? { ...t, applicants: [...t.applicants, currentUserId] } 
-        : t
-    ));
+  const updateTeamInFirestore = async (teamId: string, updates: Partial<Team>) => {
+    setLoading(true);
+    const guildDocRef = doc(db, 'guilds', guildId);
+    try {
+      const docSnap = await getDoc(guildDocRef);
+      if (!docSnap.exists()) throw new Error("Guild not found");
+
+      const currentTeams = docSnap.data().teams as Team[];
+      const updatedTeams = currentTeams.map(t =>
+        t.id === teamId ? { ...t, ...updates } : t
+      );
+      await updateDoc(guildDocRef, { teams: updatedTeams });
+      router.refresh();
+      return true;
+    } catch (error) {
+      console.error("Error updating team:", error);
+      toast({ title: "Error", description: "Failed to update team.", variant: "destructive" });
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleApprove = (teamId: string, applicantId: string) => {
-    setTeams(teams.map(t =>
-      t.id === teamId
-        ? { ...t, scholarId: applicantId, applicants: [] }
-        : t
-    ));
+  const handleApply = async (teamId: string) => {
+    const success = await updateTeamInFirestore(teamId, { 
+        applicants: arrayUnion(currentUserId) as any 
+    });
+    if (success) toast({ title: "Applied!", description: "Your application has been submitted." });
   };
 
-  const handleUnassign = (teamId: string) => {
-     setTeams(teams.map(t =>
-      t.id === teamId
-        ? { ...t, scholarId: undefined }
-        : t
-    ));
-  }
+  const handleApprove = async (teamId: string, applicantId: string) => {
+    const success = await updateTeamInFirestore(teamId, { scholarId: applicantId, applicants: [] });
+    if (success) toast({ title: "Scholar Approved", description: "The team has been assigned." });
+  };
 
-  const handleCreateTeam = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleUnassign = async (teamId: string) => {
+    const success = await updateTeamInFirestore(teamId, { scholarId: undefined });
+    if (success) toast({ title: "Scholar Unassigned", description: "The team is now available." });
+  };
+
+  const handleCreateTeam = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoading(true);
     const formData = new FormData(event.currentTarget);
     const newTeam: Team = {
       id: `team-${Date.now()}`,
@@ -72,8 +98,19 @@ export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps
               .map(id => ({ id: id.trim(), name: `Axie ${id.trim()}`, imageUrl: 'https://placehold.co/150x150.png' })),
       applicants: [],
     };
-    setTeams([newTeam, ...teams]);
-    setCreateDialogOpen(false);
+
+    const guildDocRef = doc(db, 'guilds', guildId);
+    try {
+        await updateDoc(guildDocRef, { teams: arrayUnion(newTeam) });
+        toast({ title: "Team Created", description: "The new team is ready for applicants." });
+        setCreateDialogOpen(false);
+        router.refresh();
+    } catch (error) {
+        console.error("Error creating team:", error);
+        toast({ title: "Error", description: "Failed to create team.", variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
   };
 
   return (
@@ -83,7 +120,7 @@ export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps
         {isManager && (
           <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-                <Button>
+                <Button disabled={loading}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Create Team
                 </Button>
@@ -99,23 +136,23 @@ export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">Team Name</Label>
-                        <Input id="name" name="name" placeholder="e.g. Aqua Raiders" className="col-span-3" />
+                        <Input id="name" name="name" placeholder="e.g. Aqua Raiders" className="col-span-3" required />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="walletAddress" className="text-right">Wallet</Label>
-                        <Input id="walletAddress" name="walletAddress" placeholder="ronin:..." className="col-span-3" />
+                        <Input id="walletAddress" name="walletAddress" placeholder="ronin:..." className="col-span-3" required />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="axies" className="text-right">Axie IDs</Label>
-                        <Input id="axies" name="axies" placeholder="1234, 5678, 9101" className="col-span-3" />
+                        <Input id="axies" name="axies" placeholder="1234, 5678, 9101" className="col-span-3" required />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="password" className="text-right">Password</Label>
-                        <Input id="password" name="password" type="password" placeholder="Wallet password" className="col-span-3" />
+                        <Input id="password" name="password" type="password" placeholder="Wallet password" className="col-span-3" required/>
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Create Team</Button>
+                    <Button type="submit" disabled={loading}>{loading ? "Creating..." : "Create Team"}</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -183,7 +220,7 @@ export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps
                               </Avatar>
                               <span className="text-sm font-medium">{applicant?.name}</span>
                             </div>
-                            <Button size="sm" onClick={() => handleApprove(team.id, applicantId)}><Check className="mr-2 h-4 w-4"/>Approve</Button>
+                            <Button size="sm" onClick={() => handleApprove(team.id, applicantId)} disabled={loading}><Check className="mr-2 h-4 w-4"/>Approve</Button>
                           </div>
                         )
                       })}
@@ -194,7 +231,7 @@ export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps
               <CardFooter className="bg-muted/30 p-4">
                 {isCurrentUserManager ? (
                     scholar ? (
-                      <Button variant="destructive" className="w-full" onClick={() => handleUnassign(team.id)}><UserX className="mr-2"/>Unassign Scholar</Button>
+                      <Button variant="destructive" className="w-full" onClick={() => handleUnassign(team.id)} disabled={loading}><UserX className="mr-2"/>Unassign Scholar</Button>
                     ) : (
                       <p className="text-xs text-muted-foreground text-center w-full">Awaiting applications from scholars.</p>
                     )
@@ -207,7 +244,7 @@ export function TeamsTab({ initialTeams, members, currentUserId }: TeamsTabProps
                 ) : isCurrentUserApplicant ? (
                   <Button className="w-full" disabled>Application Pending</Button>
                 ) : (
-                  <Button className="w-full" onClick={() => handleApply(team.id)}>Apply for this Team</Button>
+                  <Button className="w-full" onClick={() => handleApply(team.id)} disabled={loading}>Apply for this Team</Button>
                 )}
               </CardFooter>
             </Card>

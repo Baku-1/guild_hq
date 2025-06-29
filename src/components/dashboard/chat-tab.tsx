@@ -2,6 +2,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { doc, updateDoc, arrayUnion, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { ChatMessage, Member } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -9,41 +12,78 @@ import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatTabProps {
-  messages: ChatMessage[];
+  guildId: string;
+  initialMessages: ChatMessage[];
   currentUserId: string;
+  members: Member[];
 }
 
-export function ChatTab({ messages: initialMessages, currentUserId }: ChatTabProps) {
+export function ChatTab({ guildId, initialMessages, currentUserId, members }: ChatTabProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const membersMap = new Map(members.map(m => [m.id, m]));
+  const currentUser = membersMap.get(currentUserId);
+
+  useEffect(() => {
+    // Set up a real-time listener for chat messages
+    const guildDocRef = doc(db, 'guilds', guildId);
+    const unsubscribe = onSnapshot(guildDocRef, (doc) => {
+      if (doc.exists()) {
+        setMessages(doc.data().chatMessages || []);
+      }
+    });
+
+    // Cleanup the listener when the component unmounts
+    return () => unsubscribe();
+  }, [guildId]);
+
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === "") return;
+    if (newMessage.trim() === "" || !currentUser) return;
+    setLoading(true);
 
-    // TODO: Replace with your API call to send a chat message.
-    // The API should then return the new message to be added to the state,
-    // or you could use a real-time service like Firebase Firestore.
-
-    // This is a temporary solution for UI testing.
     const message: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      author: "You", // This should be the current user's name from your auth system.
-      avatarUrl: "https://placehold.co/100x100.png",
+      id: `msg-${Date.now()}`, // Firestore doesn't need this, but good for keys
+      authorId: currentUser.id,
+      author: currentUser.name,
+      avatarUrl: currentUser.avatarUrl,
       text: newMessage,
-      timestamp: "Just now",
+      timestamp: new Date().toISOString(),
     };
-    setMessages([...messages, message]);
-    setNewMessage("");
+
+    try {
+      const guildDocRef = doc(db, "guilds", guildId);
+      await updateDoc(guildDocRef, {
+        chatMessages: arrayUnion(message)
+      });
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: "Could not send message. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     // This scrolls the chat to the bottom when new messages are added.
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight });
+      setTimeout(() => {
+         scrollAreaRef.current?.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
+      }, 100)
     }
   }, [messages]);
 
@@ -66,7 +106,7 @@ export function ChatTab({ messages: initialMessages, currentUserId }: ChatTabPro
                     <div>
                         <div className="flex items-baseline gap-2">
                         <p className="font-semibold text-primary">{message.author}</p>
-                        <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(message.timestamp).toLocaleTimeString()}</span>
                         </div>
                         <p className="text-sm text-foreground/90">{message.text}</p>
                     </div>
@@ -82,8 +122,9 @@ export function ChatTab({ messages: initialMessages, currentUserId }: ChatTabPro
               placeholder="Type a message..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
+              disabled={loading}
             />
-            <Button type="submit" size="icon">
+            <Button type="submit" size="icon" disabled={loading}>
               <Send className="h-4 w-4" />
             </Button>
           </form>

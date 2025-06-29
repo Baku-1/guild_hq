@@ -1,3 +1,4 @@
+
 import {
   collection,
   doc,
@@ -18,6 +19,7 @@ export interface Member {
   role: 'Guild Master' | 'Officer' | 'Member' | 'Treasury Manager';
   avatarUrl: string;
   guildScore: number;
+  walletAddress: string;
 }
 
 export interface Quest {
@@ -68,6 +70,7 @@ export interface MarketplaceItem {
 
 export interface ChatMessage {
     id:string;
+    authorId: string;
     author: string;
     avatarUrl: string;
     text: string;

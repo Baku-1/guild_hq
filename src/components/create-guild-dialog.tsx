@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Guild } from "@/lib/data";
+import type { Guild, Member } from "@/lib/data";
 
 export function CreateGuildDialog() {
   const [open, setOpen] = useState(false);
@@ -35,8 +35,17 @@ export function CreateGuildDialog() {
     const guildName = formData.get('name') as string;
     const guildDescription = formData.get('description') as string;
 
-    // In a real app, you would handle file uploads to Firebase Storage
-    // and get the download URLs. For now, we'll use placeholders.
+    // This is a placeholder for your authentication system.
+    // In a real application, you would get the current user's ID and name from a session.
+    const guildCreator: Member = {
+      id: 'user-1',
+      name: 'Guild Master',
+      role: 'Guild Master',
+      guildScore: 1000,
+      avatarUrl: 'https://placehold.co/100x100.png',
+      walletAddress: '0x0000000000000000000000000000000000000001' // Placeholder address
+    }
+
     const newGuildData: Omit<Guild, 'id'> = {
       name: guildName,
       description: guildDescription,
@@ -44,8 +53,7 @@ export function CreateGuildDialog() {
       bannerUrl: 'https://placehold.co/600x240.png',
       tags: ['New', 'PvE'],
       summary: `Welcome to ${guildName}! This is a brand new guild. Start by recruiting members and creating quests.`,
-      // TODO: The creating user should be added as the Guild Master
-      members: [], 
+      members: [guildCreator], 
       quests: [],
       teams: [],
       proposals: [],
@@ -58,6 +66,8 @@ export function CreateGuildDialog() {
     };
 
     try {
+      // In a real app, you would also handle file uploads to Firebase Storage for icon/banner
+      // and get the download URLs before creating the document.
       const docRef = await addDoc(collection(db, "guilds"), newGuildData);
       console.log("Document written with ID: ", docRef.id);
       
@@ -67,8 +77,8 @@ export function CreateGuildDialog() {
       });
       
       setOpen(false);
-      router.refresh(); // Refresh the page to show the new guild
-      router.push(`/guilds/${docRef.id}`); // Optional: redirect to the new guild's page
+      router.refresh(); 
+      router.push(`/guilds/${docRef.id}`);
     } catch (error) {
       console.error("Error adding document: ", error);
       toast({

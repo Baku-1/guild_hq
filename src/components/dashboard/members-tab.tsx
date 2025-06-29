@@ -1,6 +1,10 @@
 
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { doc, updateDoc, arrayRemove, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { Member } from "@/lib/data";
 import { getRoleIcon } from "@/lib/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,34 +27,61 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, ChevronUp, ChevronDown, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
 
 interface MembersTabProps {
+  guildId: string;
   members: Member[];
   currentUserId: string;
 }
 
-export function MembersTab({ members: initialMembers, currentUserId }: MembersTabProps) {
+export function MembersTab({ guildId, members: initialMembers, currentUserId }: MembersTabProps) {
   const [members, setMembers] = useState(initialMembers);
+  const [loadingMemberId, setLoadingMemberId] = useState<string | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
   
   const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Officer';
 
-  const handleAction = (action: string, memberId: string, memberName: string) => {
-    // TODO: Replace with your API call to perform the action.
-    // e.g., api.kickMember(memberId).then(() => { ... });
-    // After the API call is successful, you should refetch the member list
-    // or update the local state to reflect the change.
+  const handleAction = async (action: 'Promote' | 'Demote' | 'Kick', member: Member) => {
+    setLoadingMemberId(member.id);
+    const guildDocRef = doc(db, 'guilds', guildId);
 
-    console.log(`${action} on member ${memberId}. In a real app, this would call a backend API.`);
-    toast({
-      title: `${action} Successful`,
-      description: `${memberName} has been ${action.toLowerCase()}.`,
-    });
+    try {
+      if (action === 'Kick') {
+        await updateDoc(guildDocRef, {
+          members: arrayRemove(member)
+        });
+      } else {
+        const docSnap = await getDoc(guildDocRef);
+        if (!docSnap.exists()) throw new Error("Guild not found");
+        
+        const currentMembers = docSnap.data().members as Member[];
+        const updatedMembers = currentMembers.map(m => {
+          if (m.id === member.id) {
+            return { ...m, role: action === 'Promote' ? 'Officer' : 'Member' };
+          }
+          return m;
+        });
 
-    // Note: State updates would be more complex in a real app and
-    // should ideally be a result of refetching data after a successful API call.
+        await updateDoc(guildDocRef, { members: updatedMembers });
+      }
+
+      toast({
+        title: `${action} Successful`,
+        description: `${member.name} has been ${action.toLowerCase()}ed.`,
+      });
+      router.refresh();
+    } catch (error) {
+      console.error(`Error performing action ${action}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to ${action.toLowerCase()} member. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingMemberId(null);
+    }
   };
 
   const sortedMembers = [...members].sort((a, b) => b.guildScore - a.guildScore);
@@ -74,6 +105,7 @@ export function MembersTab({ members: initialMembers, currentUserId }: MembersTa
               const RoleIcon = getRoleIcon(member.role);
               const canPromote = member.role === 'Member';
               const canDemote = member.role === 'Officer';
+              const isLoading = loadingMemberId === member.id;
 
               return (
                 <TableRow key={member.id}>
@@ -95,22 +127,22 @@ export function MembersTab({ members: initialMembers, currentUserId }: MembersTa
                     {isManager && member.id !== currentUserId ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" disabled={isLoading}>
                             <MoreVertical className="h-4 w-4" />
                             <span className="sr-only">Member Actions</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled={!canPromote} onSelect={() => handleAction('Promote', member.id, member.name)}>
+                          <DropdownMenuItem disabled={!canPromote || isLoading} onSelect={() => handleAction('Promote', member)}>
                             <ChevronUp className="mr-2 h-4 w-4" />
                             <span>Promote to Officer</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled={!canDemote} onSelect={() => handleAction('Demote', member.id, member.name)}>
+                          <DropdownMenuItem disabled={!canDemote || isLoading} onSelect={() => handleAction('Demote', member)}>
                             <ChevronDown className="mr-2 h-4 w-4" />
                             <span>Demote to Member</span>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" onSelect={() => handleAction('Kick', member.id, member.name)}>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive focus:bg-destructive/10" disabled={isLoading} onSelect={() => handleAction('Kick', member)}>
                             <XCircle className="mr-2 h-4 w-4" />
                             <span>Kick Member</span>
                           </DropdownMenuItem>

@@ -2,9 +2,12 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { doc, updateDoc, getDoc, arrayUnion } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Coins, Gem, CircleDollarSign, Gift, HandCoins, Landmark } from "lucide-react";
-import type { Guild, Member } from "@/lib/data";
+import type { Guild, Member, TreasuryNft } from "@/lib/data";
 import type { LucideProps } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 interface TreasuryTabProps {
+  guildId: string;
   treasury: Guild['treasury'];
   members: Member[];
   currentUserId: string;
@@ -45,64 +49,101 @@ const getTokenIcon = (symbol: string): React.ComponentType<LucideProps> => {
     }
 }
 
-export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabProps) {
+export function TreasuryTab({ guildId, treasury, members, currentUserId }: TreasuryTabProps) {
   const [donateOpen, setDonateOpen] = useState(false);
   const [disburseOpen, setDisburseOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const currentUser = members.find(m => m.id === currentUserId);
   const isManager = currentUser?.role === 'Guild Master' || currentUser?.role === 'Treasury Manager';
 
-  // TODO: Replace with an API call to fetch the current user's NFTs.
-  const userNfts: { id: string, name: string, imageUrl: string }[] = [];
+  // This is placeholder data. In a real application, you would fetch
+  // the current user's actual NFTs from a blockchain API.
+  const userNfts: TreasuryNft[] = [
+    { id: 'nft-1', name: "Mystic Axie", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUserId },
+    { id: 'nft-2', name: "Jade Reptile", imageUrl: 'https://placehold.co/150x150.png', ownerId: currentUserId },
+  ];
 
-  const handleTokenDonate = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleTokenDonate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Replace with a call to the user's wallet to initiate a transaction.
-    // e.g., signAndSendTransaction({ to: guildWallet, amount, token });
-    const formData = new FormData(e.currentTarget);
-    const token = formData.get('token');
-    const amount = formData.get('amount');
-    console.log(`Donating ${amount} ${token}... In a real app, this would prompt a wallet signature.`);
+    setLoading(true);
     
-    toast({
-      title: "Donation Submitted!",
-      description: `Please approve the transaction in your wallet to donate ${amount} ${token}.`,
-    });
-    setDonateOpen(false);
+    const formData = new FormData(e.currentTarget);
+    const tokenSymbol = formData.get('token') as string;
+    const amount = parseFloat(formData.get('amount') as string);
+    const guildDocRef = doc(db, 'guilds', guildId);
+
+    try {
+        const docSnap = await getDoc(guildDocRef);
+        if (!docSnap.exists()) throw new Error("Guild not found");
+        
+        const currentTreasury = docSnap.data().treasury;
+        const tokenIndex = currentTreasury.tokens.findIndex((t:any) => t.symbol === tokenSymbol);
+        
+        if (tokenIndex > -1) {
+            currentTreasury.tokens[tokenIndex].balance += amount;
+        } else {
+            currentTreasury.tokens.push({ symbol: tokenSymbol, balance: amount });
+        }
+        
+        await updateDoc(guildDocRef, { treasury: currentTreasury });
+
+        toast({
+            title: "Donation Successful!",
+            description: `Thank you for donating ${amount} ${tokenSymbol}.`,
+        });
+        setDonateOpen(false);
+        router.refresh();
+    } catch(error) {
+        console.error("Error donating tokens:", error);
+        toast({ title: "Error", description: "Failed to process donation.", variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
   };
 
-  const handleNftDonate = (nftName: string) => {
-     // TODO: Replace with a call to the user's wallet to initiate an NFT transfer.
-     console.log(`Donating ${nftName}... In a real app, this would prompt a wallet signature.`);
-     toast({
-      title: "NFT Donation Submitted!",
-      description: `Please approve the transaction in your wallet to donate ${nftName}.`,
-    });
-    setDonateOpen(false);
+  const handleNftDonate = async (nft: TreasuryNft) => {
+     setLoading(true);
+     const guildDocRef = doc(db, 'guilds', guildId);
+     try {
+        await updateDoc(guildDocRef, {
+            'treasury.nfts': arrayUnion(nft)
+        });
+        toast({
+            title: "NFT Donation Successful!",
+            description: `You have donated ${nft.name} to the guild.`
+        });
+        setDonateOpen(false);
+        router.refresh();
+     } catch (error) {
+        console.error("Error donating NFT:", error);
+        toast({ title: "Error", description: "Failed to donate NFT.", variant: "destructive" });
+     } finally {
+        setLoading(false);
+     }
   }
 
   const handleDisburse = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Replace with your backend API call for disbursing funds.
-    // This would likely involve a complex form and manager approval.
-    console.log("Disbursing funds... In a real app, this would call a backend API.");
+    // This is a placeholder. A real implementation would be a complex
+    // backend process involving secure transactions.
     toast({
-      title: "Disbursement Submitted",
-      description: "The disbursement request has been sent for approval.",
+      title: "Disbursement Not Implemented",
+      description: "This feature requires a secure backend process.",
     });
     setDisburseOpen(false);
   };
 
   const handleWithdraw = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Replace with your backend API call for withdrawing funds.
-    // This would likely involve multi-sig approval for security.
-    console.log("Withdrawing funds... In a real app, this would call a backend API.");
+    // This is a placeholder. A real implementation would require
+    // multi-sig authorization and a secure backend process.
     toast({
-      title: "Withdrawal Submitted",
-      description: "The withdrawal request has been sent for approval.",
+      title: "Withdrawal Not Implemented",
+      description: "This feature requires a secure backend process.",
     });
     setWithdrawOpen(false);
   };
@@ -208,8 +249,8 @@ export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabPro
                         />
                       </div>
                     </div>
-                    <Button type="submit" className="w-full">
-                      Confirm Token Donation
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Donating..." : "Confirm Token Donation"}
                     </Button>
                   </form>
                 </TabsContent>
@@ -234,7 +275,7 @@ export function TreasuryTab({ treasury, members, currentUserId }: TreasuryTabPro
                                 />
                                 <p className="text-sm font-semibold">{nft.name}</p>
                               </div>
-                              <Button size="sm" onClick={() => handleNftDonate(nft.name)}>
+                              <Button size="sm" onClick={() => handleNftDonate(nft)} disabled={loading}>
                                 Donate
                               </Button>
                             </div>
