@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Bell, Swords, Users, Vote, Shield, Coins, Store, MessageSquare, Newspaper } from 'lucide-react';
+import { ArrowLeft, Bell, Swords, Users, Vote, Shield, Coins, Store, MessageSquare, Newspaper, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 import { SummaryTab } from '@/components/dashboard/summary-tab';
@@ -15,6 +15,7 @@ import { TeamsTab } from '@/components/dashboard/teams-tab';
 import { ProposalsTab } from '@/components/dashboard/proposals-tab';
 import { MarketplaceTab } from '@/components/dashboard/marketplace-tab';
 import { ChatTab } from '@/components/dashboard/chat-tab';
+import { PrayerTab } from '@/components/dashboard/prayer-tab';
 import { GuildSettingsDialog } from '@/components/guild-settings-dialog';
 
 export default async function GuildDashboardPage({ params }: { params: { id: string } }) {
@@ -36,6 +37,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
     { value: "teams", label: "Teams", icon: Shield },
     { value: "treasury", label: "Treasury", icon: Coins },
     { value: "marketplace", label: "Marketplace", icon: Store },
+    { value: "prayers", label: "Prayers", icon: Sparkles },
     { value: "chat", label: "Chat", icon: MessageSquare },
   ]
 
@@ -71,7 +73,7 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
       <main className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto">
             <Tabs defaultValue="teams" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 md:grid-cols-8">
+            <TabsList className="grid w-full grid-cols-5 md:grid-cols-9">
                 {TABS.map(tab => (
                      <TabsTrigger key={tab.value} value={tab.value}>
                         <tab.icon className="w-4 h-4 mr-0 md:mr-2" />
@@ -104,6 +106,9 @@ export default async function GuildDashboardPage({ params }: { params: { id: str
             </TabsContent>
             <TabsContent value="marketplace" className="mt-6">
                 <MarketplaceTab items={guild.marketplace} />
+            </TabsContent>
+             <TabsContent value="prayers" className="mt-6">
+                <PrayerTab members={guild.members} currentUserId={currentUserId} />
             </TabsContent>
             <TabsContent value="chat" className="mt-6">
                 <ChatTab messages={guild.chatMessages} />
